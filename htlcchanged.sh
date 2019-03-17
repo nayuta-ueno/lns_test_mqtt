@@ -11,5 +11,5 @@ EOS
 `
 
 echo ${JSON}
-python script/mqtt_pub.py result "${JSON}"
+python3 script/mqtt_pub.py result "${JSON}"
 

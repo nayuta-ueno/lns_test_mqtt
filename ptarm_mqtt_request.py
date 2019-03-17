@@ -23,29 +23,29 @@ def requester(client):
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     client.subscribe('result')
-    print 'NODE_ID=' + NODE_ID
+    print('NODE_ID=' + NODE_ID)
     th = threading.Thread(target=requester, args=(client,), name='requester')
     th.start()
 
 
 def on_message(client, _, msg):
-    print '[' + msg.topic + ']' + msg.payload
+    print('[' + msg.topic + ']' + msg.payload)
 
 
 def linux_cmd_exec(cmd):
-    print 'cmd:', cmd.split(' ')
+    print('cmd:', cmd.split(' '))
     ret = ''
     try:
         ret = subprocess.check_output(cmd.split(' ')).strip()
     except subprocess.CalledProcessError as e:
-        print '!!! error happen(errcode=%d) !!!' % e.returncode
+        print('!!! error happen(errcode=%d) !!!' % e.returncode)
     return ret
 
 
 def socket_send(req):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(('localhost', 9736))
-    print 'req=' + req
+    print('req=' + req)
     client.send(req)
     response = client.recv(4096)
     client.close()
@@ -63,7 +63,7 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print 'usage: ' + sys.argv[0] + ' NODE_ID'
+        print('usage: ' + sys.argv[0] + ' NODE_ID')
         sys.exit()
     NODE_ID = sys.argv[1]
     main()

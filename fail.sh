@@ -11,4 +11,4 @@ EOS
 `
 
 echo ${JSON} | jq .
-python mqtt_pub.py stop "${JSON}"
+python3 script/mqtt_pub.py stop "${JSON}"

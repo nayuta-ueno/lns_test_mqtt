@@ -19,20 +19,20 @@ def on_connect(client, user_data, flags, response_code):
 
     del user_data, flags, response_code
     node_id, result = check_status()
-    print 'node_id=' + node_id
+    print('node_id=' + node_id)
     client.subscribe('#')
 
 
 def on_message(client, _, msg):
-    print '[' + msg.topic + ']' + msg.payload
+    print('[' + msg.topic + ']' + msg.payload)
     if msg.topic == node_id:
         _, ret = check_status()
         if ret:
             res = socket_send(msg.payload)
-            print 'res=' + res
+            print('res=' + res)
             client.publish('response', res)
     elif msg.topic == 'stop':
-        print 'STOP!'
+        print('STOP!')
         sys.exit()
 
 
@@ -41,35 +41,35 @@ def check_status():
     result = False
     try:
         jcmd = '{"method":"getinfo","params":[]}'
-        print 'json=' + jcmd
+        print('json=' + jcmd)
         response = socket_send(jcmd)
         jrpc = json.loads(response)
         node = jrpc['result']['node_id']
         for prm in jrpc['result']['peers']:
-            print 'status=' + prm['status']
+            print('status=' + prm['status'])
             if prm['status'] == 'normal operation':
                 result = True
                 break
     except:
-        print 'traceback.format_exc():\n%s' % traceback.format_exc()
+        print('traceback.format_exc():\n%s' % traceback.format_exc())
         sys.exit()
     return node, result
 
 
 def linux_cmd_exec(cmd):
-    print 'cmd:', cmd.split(' ')
+    print('cmd:', cmd.split(' '))
     ret = ''
     try:
         ret = subprocess.check_output(cmd.split(' ')).strip()
     except subprocess.CalledProcessError as e:
-        print '!!! error happen(errcode=%d) !!!' % e.returncode
+        print('!!! error happen(errcode=%d) !!!' % e.returncode)
     return ret
 
 
 def socket_send(req):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(('localhost', 9736))
-    print 'req=' + req
+    print('req=' + req)
     client.send(req)
     response = client.recv(4096)
     client.close()

@@ -18,22 +18,22 @@ def on_connect(client, user_data, flags, response_code):
 
 
 def on_message(client, _, msg):
-    print '[' + msg.topic + ']' + msg.payload
+    print('[' + msg.topic + ']' + msg.payload)
     if msg.topic == 'response':
         jrpc = json.loads(msg.payload)
         try:
             result = jrpc['result']
-            print 'hash=' + result['hash']
-            print 'amount_msat=' + str(result['amount_msat'])
-            print 'bolt11=' + result['bolt11']
+            print('hash=' + result['hash'])
+            print('amount_msat=' + str(result['amount_msat']))
+            print('bolt11=' + result['bolt11'])
             if check_status():
                 jcmd = '{"method":"routepay","params":["' + result['bolt11'] + '",0]}'
-                print 'json=' + jcmd
+                print('json=' + jcmd)
                 socket_send(jcmd)
         except:
-            print 'traceback.format_exc():\n%s' % traceback.format_exc()
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
     elif msg.topic == 'stop':
-        print 'STOP!'
+        print('STOP!')
         sys.exit()
 
 
@@ -41,27 +41,27 @@ def check_status():
     result = False
     try:
         jcmd = '{"method":"getinfo","params":[]}'
-        print 'json=' + jcmd
+        print('json=' + jcmd)
         response = socket_send(jcmd)
         jrpc = json.loads(response)
         for prm in jrpc['result']['peers']:
-            print 'status=' + prm['status']
+            print('status=' + prm['status'])
             if prm['status'] == 'normal operation':
                 result = True
                 break
     except:
-        print 'traceback.format_exc():\n%s' % traceback.format_exc()
+        print('traceback.format_exc():\n%s' % traceback.format_exc())
         sys.exit()
     return result
 
 
 def linux_cmd_exec(cmd):
-    print 'cmd:', cmd.split(' ')
+    print('cmd:', cmd.split(' '))
     ret = ''
     try:
         ret = subprocess.check_output(cmd.split(' ')).strip()
     except subprocess.CalledProcessError as e:
-        print '!!! error happen(errcode=%d) !!!' % e.returncode
+        print('!!! error happen(errcode=%d) !!!' % e.returncode)
     return ret
 
 
