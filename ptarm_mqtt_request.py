@@ -2,6 +2,7 @@
 #   wait invoice request and publish invoice
 import subprocess
 import time
+import sys
 
 import paho.mqtt.client
 import socket
@@ -10,7 +11,7 @@ import threading
 
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
-NODE_ID = '02037ad61db674eb76ae2687229551fce864ad1c4a7737605443d1b28487addc9f'
+NODE_ID = ''
 
 
 def requester(client):
@@ -22,6 +23,7 @@ def requester(client):
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     client.subscribe('result')
+    print 'NODE_ID=' + NODE_ID
     th = threading.Thread(target=requester, args=(client,), name='requester')
     th.start()
 
@@ -60,4 +62,8 @@ def main():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print 'usage: ' + sys.argv[0] + ' NODE_ID'
+        sys.exit()
+    NODE_ID = sys.argv[1]
     main()
