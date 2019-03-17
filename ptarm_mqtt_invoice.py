@@ -10,19 +10,24 @@ import traceback
 
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
-NODE_ID = '02037ad61db674eb76ae2687229551fce864ad1c4a7737605443d1b28487addc9f'
+
+node_id = ''
 
 
 def on_connect(client, user_data, flags, response_code):
+    global node_id
+
     del user_data, flags, response_code
-    check_status()
+    node_id, result = check_status()
+    print 'node_id=' + node_id
     client.subscribe('#')
 
 
 def on_message(client, _, msg):
     print '[' + msg.topic + ']' + msg.payload
-    if msg.topic == NODE_ID:
-        if check_status():
+    if msg.topic == node_id:
+        _, ret = check_status()
+        if ret:
             res = socket_send(msg.payload)
             print 'res=' + res
             client.publish('response', res)
@@ -32,12 +37,14 @@ def on_message(client, _, msg):
 
 
 def check_status():
+    node = ''
     result = False
     try:
         jcmd = '{"method":"getinfo","params":[]}'
         print 'json=' + jcmd
         response = socket_send(jcmd)
         jrpc = json.loads(response)
+        node = jrpc['result']['node_id']
         for prm in jrpc['result']['peers']:
             print 'status=' + prm['status']
             if prm['status'] == 'normal operation':
@@ -46,7 +53,7 @@ def check_status():
     except:
         print 'traceback.format_exc():\n%s' % traceback.format_exc()
         sys.exit()
-    return result
+    return node, result
 
 
 def linux_cmd_exec(cmd):
