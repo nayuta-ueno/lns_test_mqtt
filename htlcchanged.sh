@@ -11,5 +11,5 @@ EOS
 `
 
 echo ${JSON}
-python /home/nayuta/lns_test_mqtt/mqtt_pub.py result "${JSON}"
+python script/mqtt_pub.py result "${JSON}"
 
