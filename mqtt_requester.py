@@ -11,25 +11,52 @@ import threading
 
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
-NODE_ID = ''
+payer_id = ''
+payee_id = ''
 
 
 def requester(client):
     while True:
-        client.publish(NODE_ID, '{"method":"invoice","params":[ 1000,0 ]}')
-        time.sleep(30)
+        # request invoice: payee
+        client.publish(payee_id, '{"method":"invoice","params":[ 1000,0 ]}')
+        time.sleep(60)
 
 
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     client.subscribe('result')
-    print('NODE_ID=' + NODE_ID)
+    print('payee_id=' + payee_id)
     th = threading.Thread(target=requester, args=(client,), name='requester')
     th.start()
 
 
 def on_message(client, _, msg):
-    print('[' + msg.topic + ']' + msg.payload)
+    try:
+        payload = str(msg.payload, 'utf-8')
+        print('[' + msg.topic + ']' + payload)
+        if msg.topic.startswith('response/'):
+            json_msg = json.loads(payload)
+            if msg.topic.endswith(payer_id):
+                response_payer(json_msg)
+                pass
+            elif msg.topic.endswith(payee_id):
+                response_payee(json_msg)
+                pass
+        elif msg.topic == 'stop':
+            print('STOP!')
+            sys.exit()
+    except:
+        print('traceback.format_exc():\n%s' % traceback.format_exc())
+
+
+def response_payer(json_msg):
+    if json_msg['result'][0] == 'pay':
+        print('pay start')
+
+
+def response_payee(json_msg):
+    if json_msg['result'][0] == 'invoice':
+        client.publish(payer_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
 def linux_cmd_exec(cmd):
@@ -62,8 +89,9 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print('usage: ' + sys.argv[0] + ' NODE_ID')
+    if len(sys.argv) != 3:
+        print('usage: ' + sys.argv[0] + ' payer_id payee_id')
         sys.exit()
-    NODE_ID = sys.argv[1]
+    payer_id = sys.argv[1]
+    payee_id = sys.argv[2]
     main()
