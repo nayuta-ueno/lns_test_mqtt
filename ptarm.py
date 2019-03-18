@@ -48,6 +48,32 @@ class Ptarm(lnnode.LnNode):
         p_str_stat = "???";
     }
     '''
+    def get_status(self, num=0):
+        try:
+            jcmd = '{"method":"getinfo","params":[]}'
+            response = self._socket_send(jcmd)
+            jrpc = json.loads(response.decode('utf-8'))
+            peer = jrpc['result']['peers'][num]
+            peer_status = peer['status']
+            print('(status=', peer_status + ')')
+            if peer_status == 'normal operation':
+                status = LnNode.Status.NORMAL
+            elif peer_status == 'establishing':
+                status = LnNode.Status.FUNDING
+            elif peer_status == 'close waiting' or\
+                peer_status == 'mutual close' or\
+                peer_status == 'unilateral close(local)' or\
+                peer_status == 'unilateral close(remote)' or\
+                peer_status == 'revoked transaction close':
+                status = LnNode.Status.CLOSING
+            else:
+                status = LnNode.Status.NONE
+        except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            sys.exit()
+        return status
+
+
     def check_status(self):
         node = ''
         result = False

@@ -7,12 +7,12 @@ import sys
 import json
 import traceback
 
-import lnnode
+from lnnode import LnNode
 from lightning import LightningRpc
 import random
 
 
-class CLightning(lnnode.LnNode):
+class CLightning(LnNode):
     lnrpc = ''
 
 
@@ -47,19 +47,39 @@ class CLightning(lnnode.LnNode):
         ONCHAIN
     };
     '''
+    def get_status(self, num=0):
+        try:
+            result = self.lnrpc.listpeers()
+            peer = result['peers'][num]
+            peer_status = peer['channels'][0]['state']
+            print('(status=', peer_status + ')')
+            if peer_status == 'CHANNELD_NORMAL':
+                status = LnNode.Status.NORMAL
+            elif peer_status == 'CHANNELD_AWAITING_LOCKIN':
+                status = LnNode.Status.FUNDING
+            elif peer_status == 'CHANNELD_SHUTTING_DOWN' or\
+                peer_status == 'CLOSINGD_SIGEXCHANGE' or\
+                peer_status == 'CLOSINGD_COMPLETE' or\
+                peer_status == 'AWAITING_UNILATERAL' or\
+                peer_status == 'FUNDING_SPEND_SEEN':
+                status = LnNode.Status.CLOSING
+            else:
+                status = LnNode.Status.NONE
+        except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            sys.exit()
+        return status
+
+
     def check_status(self):
         node = ''
         result = False
         try:
             info = self.lnrpc.getinfo()
             node = info['id']
-            result = self.lnrpc.listpeers()
-            for peer in result['peers']:
-                print('status=', peer['channels'][0]['state'])
-                # 1つでも生きていれば良いことにする
-                if peer['channels'][0]['state'] == 'CHANNELD_NORMAL':
-                    result = True
-                    break
+            status = self.get_status()
+            if status == LnNode.Status.NORMAL:
+                result = True
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             sys.exit()
