@@ -8,7 +8,7 @@ import traceback
 import lnnode
 
 
-PORT_PTARM = 3333
+PORT_PTARM = 9735
 
 class Ptarm(lnnode.LnNode):
     rpcaddr = 'localhost'
@@ -25,7 +25,7 @@ class Ptarm(lnnode.LnNode):
         try:
             jcmd = '{"method":"getinfo","params":[]}'
             response = self._socket_send(jcmd)
-            jrpc = json.loads(response)
+            jrpc = json.loads(response.decode('utf-8'))
             node = jrpc['result']['node_id']
             for prm in jrpc['result']['peers']:
                 print('status=' + prm['status'])
@@ -40,7 +40,7 @@ class Ptarm(lnnode.LnNode):
 
     def get_invoice(self, amount_msat):
         res = self._socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
-        res = '{"result": ["invoice","' + json.loads(res)['result']['bolt11'] + '"]}'
+        res = '{"result": ["invoice","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
         return res
 
 
