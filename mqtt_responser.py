@@ -22,7 +22,7 @@ def on_connect(client, user_data, flags, response_code):
     global node_id
 
     del user_data, flags, response_code
-    node_id, result = ln_node.check_status()
+    node_id, _ = ln_node.check_status()
     print('node_id=' + node_id)
     client.subscribe('#')
     print('MQTT connected')
@@ -31,8 +31,8 @@ def on_connect(client, user_data, flags, response_code):
 def on_message(client, _, msg):
     try:
         payload = str(msg.payload, 'utf-8')
-        print('[' + msg.topic + ']' + payload)
-        if msg.topic == node_id:
+        if msg.topic == 'request/' + node_id:
+            print('REQUEST[' + msg.topic + ']' + payload)
             _, ret = ln_node.check_status()
             if ret:
                 exec_request(client, json.loads(payload))

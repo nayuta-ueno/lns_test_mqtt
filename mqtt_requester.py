@@ -3,6 +3,8 @@
 import subprocess
 import time
 import sys
+import json
+import traceback
 
 import paho.mqtt.client
 import socket
@@ -18,13 +20,14 @@ payee_id = ''
 def requester(client):
     while True:
         # request invoice: payee
-        client.publish(payee_id, '{"method":"invoice","params":[ 1000,0 ]}')
-        time.sleep(60)
+        print('send to payee: invoice')
+        client.publish('request/' + payee_id, '{"method":"invoice","params":[ 1000,0 ]}')
+        time.sleep(30)
 
 
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
-    client.subscribe('result')
+    client.subscribe('#')
     print('payee_id=' + payee_id)
     th = threading.Thread(target=requester, args=(client,), name='requester')
     th.start()
@@ -33,30 +36,34 @@ def on_connect(client, user_data, flags, response_code):
 def on_message(client, _, msg):
     try:
         payload = str(msg.payload, 'utf-8')
-        print('[' + msg.topic + ']' + payload)
         if msg.topic.startswith('response/'):
+            print('RESPONSE[' + msg.topic + ']' + payload)
             json_msg = json.loads(payload)
             if msg.topic.endswith(payer_id):
-                response_payer(json_msg)
+                response_payer(client, json_msg)
                 pass
             elif msg.topic.endswith(payee_id):
-                response_payee(json_msg)
+                response_payee(client, json_msg)
                 pass
+        elif msg.topic.startswith('result/'):
+            print('RESULT[' + msg.topic + ']' + payload)
         elif msg.topic == 'stop':
             print('STOP!')
             sys.exit()
+        else:
+            print('[' + msg.topic + ']' + payload)
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
 
 
-def response_payer(json_msg):
+def response_payer(client, json_msg):
     if json_msg['result'][0] == 'pay':
         print('pay start')
 
 
-def response_payee(json_msg):
+def response_payee(client, json_msg):
     if json_msg['result'][0] == 'invoice':
-        client.publish(payer_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
+        client.publish('request/' + payer_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
 def linux_cmd_exec(cmd):

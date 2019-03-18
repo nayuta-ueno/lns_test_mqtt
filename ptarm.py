@@ -8,9 +8,11 @@ import traceback
 import lnnode
 
 
+PORT_PTARM = 3333
+
 class Ptarm(lnnode.LnNode):
     rpcaddr = 'localhost'
-    rpcport = 3333 + 1
+    rpcport = PORT_PTARM + 1
 
 
     def setup(self):
@@ -22,7 +24,6 @@ class Ptarm(lnnode.LnNode):
         result = False
         try:
             jcmd = '{"method":"getinfo","params":[]}'
-            print('json=' + jcmd)
             response = self._socket_send(jcmd)
             jrpc = json.loads(response)
             node = jrpc['result']['node_id']
@@ -52,7 +53,6 @@ class Ptarm(lnnode.LnNode):
     def _socket_send(self, req):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((self.rpcaddr, self.rpcport))
-        print('req=' + req)
         client.send(req.encode())
         response = client.recv(4096)
         client.close()
