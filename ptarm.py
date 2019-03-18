@@ -18,7 +18,36 @@ class Ptarm(lnnode.LnNode):
     def setup(self):
         pass
 
-
+    '''
+    switch (pChannel->status) {
+    case LN_STATUS_NONE:
+        p_str_stat = "none";
+        break;
+    case LN_STATUS_ESTABLISH:
+        p_str_stat = "establishing";
+        break;
+    case LN_STATUS_NORMAL:
+        p_str_stat = "normal operation";
+        break;
+    case LN_STATUS_CLOSE_WAIT:
+        p_str_stat = "close waiting";
+        break;
+    case LN_STATUS_CLOSE_MUTUAL:
+        p_str_stat = "mutual close";
+        break;
+    case LN_STATUS_CLOSE_UNI_LOCAL:
+        p_str_stat = "unilateral close(local)";
+        break;
+    case LN_STATUS_CLOSE_UNI_REMOTE:
+        p_str_stat = "unilateral close(remote)";
+        break;
+    case LN_STATUS_CLOSE_REVOKED:
+        p_str_stat = "revoked transaction close";
+        break;
+    default:
+        p_str_stat = "???";
+    }
+    '''
     def check_status(self):
         node = ''
         result = False
