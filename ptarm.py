@@ -5,17 +5,20 @@ import sys
 import json
 import traceback
 
-import lnnode
+from lnnode import LnNode
 
 
 PORT_PTARM = 9735
 
-class Ptarm(lnnode.LnNode):
-    rpcaddr = 'localhost'
-    rpcport = PORT_PTARM + 1
+class Ptarm(LnNode):
+    rpc_addr = 'localhost'
+    rpc_port = PORT_PTARM + 1
 
 
-    def setup(self):
+    def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
+        self.ipaddr = ipaddr
+        self.port = port
+        self.rpc_port = port + 1
         pass
 
     '''
@@ -53,9 +56,11 @@ class Ptarm(lnnode.LnNode):
             jcmd = '{"method":"getinfo","params":[]}'
             response = self._socket_send(jcmd)
             jrpc = json.loads(response.decode('utf-8'))
+            if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
+                return LnNode.Status.NONE
             peer = jrpc['result']['peers'][num]
             peer_status = peer['status']
-            print('(status=', peer_status + ')')
+            #print('(status=', peer_status + ')')
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'establishing':
@@ -70,7 +75,7 @@ class Ptarm(lnnode.LnNode):
                 status = LnNode.Status.NONE
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            sys.exit()
+            status = LnNode.Status.NONE
         return status
 
 
@@ -82,15 +87,31 @@ class Ptarm(lnnode.LnNode):
             response = self._socket_send(jcmd)
             jrpc = json.loads(response.decode('utf-8'))
             node = jrpc['result']['node_id']
-            for prm in jrpc['result']['peers']:
-                print('status=' + prm['status'])
-                if prm['status'] == 'normal operation':
+            for peer in jrpc['result']['peers']:
+                #print('status=' + peer['status'])
+                if peer['status'] == 'normal operation':
                     result = True
                     break
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             sys.exit()
         return node, result
+
+
+    def connect(self, node_id, ipaddr, port):
+        jcmd = '{"method":"connect","params":["' + node_id + '","' + ipaddr + '",' + str(port) + ']}'
+        print(jcmd)
+        response = self._socket_send(jcmd)
+        jrpc = json.loads(response.decode('utf-8'))
+        if ('result' in jrpc) and (jrpc['result'] == 'OK'):
+            res = '{"result": ["connect","OK"]}'
+        else:
+            res = '{"result": ["connect","NG"]}'
+        return res
+
+
+    def open_channel(self, node_id, amount):
+        pass
 
 
     def get_invoice(self, amount_msat):
@@ -107,7 +128,7 @@ class Ptarm(lnnode.LnNode):
 
     def _socket_send(self, req):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((self.rpcaddr, self.rpcport))
+        client.connect((self.rpc_addr, self.rpc_port))
         client.send(req.encode())
         response = client.recv(4096)
         client.close()

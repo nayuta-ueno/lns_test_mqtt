@@ -14,10 +14,15 @@ import random
 
 class CLightning(LnNode):
     lnrpc = ''
+    rpc_file = '/tmp/lightningrpc'
 
 
-    def setup(self):
-        self.lnrpc = LightningRpc("/tmp/lightningrpc")
+    def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
+        self.ipaddr = ipaddr
+        self.port = port
+        if argv != None:
+            self.rpc_file = argv
+        self.lnrpc = LightningRpc(self.rpc_file)
 
 
     '''
@@ -51,8 +56,10 @@ class CLightning(LnNode):
         try:
             result = self.lnrpc.listpeers()
             peer = result['peers'][num]
-            peer_status = peer['channels'][0]['state']
-            print('(status=', peer_status + ')')
+            for p in peer['channels']:
+                if p['state'] != 'ONCHAIN':
+                    peer_status = p['state']
+            #print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'CHANNELD_AWAITING_LOCKIN':
@@ -67,7 +74,7 @@ class CLightning(LnNode):
                 status = LnNode.Status.NONE
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            sys.exit()
+            status = LnNode.Status.NONE
         return status
 
 
@@ -84,6 +91,17 @@ class CLightning(LnNode):
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             sys.exit()
         return node, result
+
+
+    def connect(self, node_id, ipaddr, port):
+        pass
+
+
+    def open_channel(self, node_id, amount):
+        res = self.lnrpc.fundchannel(node_id, amount)
+        #print('open_channel=', res)
+        res = '{"result": ["openchannel","' + res['txid'] + '"]}'
+        return res
 
 
     def get_invoice(self, amount_msat):

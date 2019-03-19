@@ -11,9 +11,12 @@ class LnNode(metaclass=ABCMeta):
         NORMAL = auto()
         CLOSING = auto()
 
+    ipaddr = '127.0.0.1'
+    port = 9735
+
 
     @abstractmethod
-    def setup(self):
+    def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
         pass
 
 
@@ -27,6 +30,19 @@ class LnNode(metaclass=ABCMeta):
         pass
 
 
+    @abstractmethod
+    def connect(self, node_id, ipaddr, port):
+        pass
+
+
+    @abstractmethod
+    def open_channel(self, node_id, amount):
+        pass
+
+
+    '''
+    {"result": ["invoice", "<BOLT11 invoice>"]}
+    '''
     @abstractmethod
     def get_invoice(self, amount_msat):
         pass

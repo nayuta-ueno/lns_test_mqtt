@@ -5,18 +5,13 @@ import paho.mqtt.client
 import sys
 import json
 import traceback
-import time
 
 import lnnode
 import ptarm
 import clightning
 
 
-ln_node = clightning.CLightning()
-ln_node.setup('/tmp/lightning-rpc')
-
-while True:
-    status = ln_node.get_status()
-    print(status)
-    time.sleep(10)
-
+ln_node = ptarm.Ptarm()
+ln_node.setup(3333)
+status = ln_node.get_status()
+print(status)
