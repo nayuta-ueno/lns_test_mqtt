@@ -3,19 +3,27 @@ import paho.mqtt.client
 import traceback
 
 
+count = 0
+
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
 
 
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
-    client.subscribe('#')
+    client.subscribe('status/02c42924185506dafb183391a65d5fe46d7a4d53fe563311d8d2a0ae0537f8de95')
+    #client.subscribe('response/02c42924185506dafb183391a65d5fe46d7a4d53fe563311d8d2a0ae0537f8de95')
     print('MQTT connected')
 
 
 def on_message(client, _, msg):
-    print('on_message')
-    # print('[' + msg.topic + ']' + msg.payload)
+    global count
+
+    payload = str(msg.payload, 'utf-8')
+    #print('payload=' + payload, ' find=', str(payload.find('status')))
+    if payload.find('openchannel') != -1:
+        count += 1
+        print('count=' + str(count) + '  ' + payload)
 
 
 def main():

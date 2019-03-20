@@ -17,8 +17,8 @@ MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
 PAY_COUNT_MAX = 5
 
-payer_id = ''
-payee_id = ''
+funder_id = ''
+fundee_id = ''
 dict_recv_node = dict()
 dict_status_node = dict()
 thread_request = None
@@ -37,7 +37,7 @@ def requester(client):
     while loop_reqester:
         # request invoice: payee
         print('send to payee: invoice')
-        client.publish('request/' + payee_id, '{"method":"invoice","params":[ 1000,0 ]}')
+        client.publish('request/' + fundee_id, '{"method":"invoice","params":[ 1000,0 ]}')
         time.sleep(10)
     print('exit requester')
 
@@ -95,10 +95,10 @@ def on_message(client, _, msg):
         if msg.topic.startswith('response/'):
             print('RESPONSE[' + msg.topic + ']' + payload)
             json_msg = json.loads(payload)
-            if msg.topic.endswith(payer_id):
+            if msg.topic.endswith(funder_id):
                 response_payer(client, json_msg)
                 pass
-            elif msg.topic.endswith(payee_id):
+            elif msg.topic.endswith(fundee_id):
                 response_payee(client, json_msg)
                 pass
         elif msg.topic.startswith('result/'):
@@ -108,7 +108,7 @@ def on_message(client, _, msg):
                 print('payed:' + str(pay_count) + '  local_msat=' + str(json_msg['local_msat']))
                 if pay_count >= PAY_COUNT_MAX:
                     pay_count = 0
-                    client.publish('request/' + payee_id, '{"method":"closechannel", "params":[ "' + payer_id + '" ]}')
+                    client.publish('request/' + fundee_id, '{"method":"closechannel", "params":[ "' + funder_id + '" ]}')
                     print('CLOSE CHANNEL')
         elif msg.topic.startswith('status/'):
             json_msg = json.loads(payload)
@@ -143,13 +143,13 @@ def on_message(client, _, msg):
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
             elif all_none and not is_funding:
-                print('start funding: ', dict_status_node[payer_id])
+                print('start funding: ', dict_status_node[funder_id])
                 is_funding = True
-                client.publish('request/' + payee_id, \
+                client.publish('request/' + fundee_id, \
                     '{"method":"connect", "params":['
-                        '"' + payer_id + '", '
-                        '"' + dict_status_node[payer_id]['ipaddr'] + '", ' +\
-                        str(dict_status_node[payer_id]['port']) +\
+                        '"' + funder_id + '", '
+                        '"' + dict_status_node[funder_id]['ipaddr'] + '", ' +\
+                        str(dict_status_node[funder_id]['port']) +\
                         ' ]}')
         else:
             all_normal = True
@@ -184,11 +184,11 @@ def response_payee(client, json_msg):
 
     if json_msg['result'][0] == 'connect':
         if json_msg['result'][1] == 'OK':
-            client.publish('request/' + payer_id, '{"method":"openchannel","params":[ "' + payee_id + '", 5000 ]}')
+            client.publish('request/' + funder_id, '{"method":"openchannel","params":[ "' + fundee_id + '", 5000 ]}')
         else:
             is_funding = False
     elif json_msg['result'][0] == 'invoice':
-        client.publish('request/' + payer_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
+        client.publish('request/' + funder_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
 def linux_cmd_exec(cmd):
@@ -222,11 +222,11 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('usage: ' + sys.argv[0] + ' payer_id payee_id')
+        print('usage: ' + sys.argv[0] + ' funder_id fundee_id')
         sys.exit()
-    payer_id = sys.argv[1]
-    payee_id = sys.argv[2]
-    if len(payer_id) != 66 or len(payee_id) != 66:
+    funder_id = sys.argv[1]
+    fundee_id = sys.argv[2]
+    if len(funder_id) != 66 or len(fundee_id) != 66:
         print('invalid length')
         sys.exit()
     main()
