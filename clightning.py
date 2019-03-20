@@ -56,6 +56,7 @@ class CLightning(LnNode):
         try:
             result = self.lnrpc.listpeers()
             peer = result['peers'][num]
+            peer_status = ''
             for p in peer['channels']:
                 if p['state'] != 'ONCHAIN':
                     peer_status = p['state']
@@ -114,4 +115,10 @@ class CLightning(LnNode):
         res = self.lnrpc.pay(invoice)
         print('pay=', res)
         res = '{"result": ["pay"]}'
+        return res
+
+
+    def close_mutual(self, node_id):
+        res = self.lnrpc.close(node_id)
+        res = '{"result": ["closechannel"]}'
         return res

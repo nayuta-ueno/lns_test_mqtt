@@ -62,6 +62,7 @@ def poll_status(client):
 def exec_request(client, json_msg):
     method = json_msg['method']
     params = json_msg['params']
+    res = ''
     if method == 'invoice':
         if ln_node.get_status() == LnNode.Status.NORMAL:
             res = ln_node.get_invoice(params[0])
@@ -74,8 +75,14 @@ def exec_request(client, json_msg):
     elif method == 'openchannel':
         if ln_node.get_status() == LnNode.Status.NONE:
             res = ln_node.open_channel(params[0], params[1])
-    print('res=' + res)
-    client.publish('response/' + node_id, res)
+    elif method == 'closechannel':
+        if ln_node.get_status() == LnNode.Status.NORMAL:
+            res = ln_node.close_mutual(params[0])
+    else:
+        print('method=', method)
+    if len(res) > 0:
+        print('res=' + res)
+        client.publish('response/' + node_id, res)
 
 
 def linux_cmd_exec(cmd):

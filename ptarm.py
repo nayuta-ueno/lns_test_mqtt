@@ -103,15 +103,33 @@ class Ptarm(LnNode):
         print(jcmd)
         response = self._socket_send(jcmd)
         jrpc = json.loads(response.decode('utf-8'))
+        print('jrpc=', jrpc)
         if ('result' in jrpc) and (jrpc['result'] == 'OK'):
+            res = '{"result": ["connect","OK"]}'
+        elif ('error' in jrpc) and (jrpc['error']['code'] == -10002):
+            #already connected
             res = '{"result": ["connect","OK"]}'
         else:
             res = '{"result": ["connect","NG"]}'
         return res
 
 
+    def disconnect(self, node_id):
+        jcmd = '{"method":"disconnect","params":["' + node_id + ',"0.0.0.0",0"]}'
+        print(jcmd)
+        response = self._socket_send(jcmd)
+        jrpc = json.loads(response.decode('utf-8'))
+        if ('result' in jrpc) and (jrpc['result'] == 'OK'):
+            res = '{"result": ["disconnect","OK"]}'
+        else:
+            res = '{"result": ["disconnect","NG"]}'
+        return res
+
+
     def open_channel(self, node_id, amount):
-        pass
+        res = self._socket_send('{"method":"fund","params":[ ' + str(amount) + ',0 ]}')
+        res = '{"result": ["invoice","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
+        return res
 
 
     def get_invoice(self, amount_msat):
@@ -123,6 +141,12 @@ class Ptarm(LnNode):
     def pay(self, invoice):
         res = self._socket_send('{"method":"routepay","params":["' + invoice + '",0]}')
         res = '{"result": ["pay"]}'
+        return res
+
+
+    def close_mutual(self, node_id):
+        res = self._socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
+        res = '{"result": ["closechannel"]}'
         return res
 
 

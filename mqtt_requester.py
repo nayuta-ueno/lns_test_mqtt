@@ -15,6 +15,8 @@ import threading
 
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
+PAY_COUNT_MAX = 5
+
 payer_id = ''
 payee_id = ''
 dict_recv_node = dict()
@@ -22,6 +24,7 @@ dict_status_node = dict()
 thread_request = None
 loop_reqester = True
 is_funding = False
+pay_count = 0
 
 
 def _killme():
@@ -71,8 +74,9 @@ topic:
     'stop'
 '''
 def on_message(client, _, msg):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding
+    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
 
+    payload = ''
     try:
         #node check(need 2 nodes)
         if msg.topic.startswith('response/') or msg.topic.startswith('status/'):
@@ -86,6 +90,8 @@ def on_message(client, _, msg):
 
         #payload
         payload = str(msg.payload, 'utf-8')
+        if len(payload) == 0:
+            return
         if msg.topic.startswith('response/'):
             print('RESPONSE[' + msg.topic + ']' + payload)
             json_msg = json.loads(payload)
@@ -96,13 +102,20 @@ def on_message(client, _, msg):
                 response_payee(client, json_msg)
                 pass
         elif msg.topic.startswith('result/'):
-            print('RESULT[' + msg.topic + ']' + payload)
+            #print('RESULT[' + msg.topic + ']' + payload)
+            json_msg = json.loads(payload)
+            if json_msg['method'] == 'htlc_changed':
+                print('payed:' + str(pay_count) + '  local_msat=' + str(json_msg['local_msat']))
+                if pay_count >= PAY_COUNT_MAX:
+                    pay_count = 0
+                    client.publish('request/' + payee_id, '{"method":"closechannel", "params":[ "' + payer_id + '" ]}')
+                    print('CLOSE CHANNEL')
         elif msg.topic.startswith('status/'):
             json_msg = json.loads(payload)
             dict_status_node[recv_id] = json_msg
             if json_msg['status'] != 'Status.NORMAL':
                 print('STATUS[' + msg.topic + ']' + json_msg['status'])
-                print('      json_msg=', json_msg)
+                print('      json_msg=', json_msg, ' is_funding=', is_funding)
         elif msg.topic == 'stop':
             print('STOP!')
             _killme()
@@ -121,7 +134,7 @@ def on_message(client, _, msg):
             for node in dict_status_node:
                 if dict_status_node[node]['status'] != 'Status.NORMAL':
                     all_normal = False
-                elif dict_status_node[node]['status'] != 'Status.NONE':
+                if dict_status_node[node]['status'] != 'Status.NONE':
                     all_none = False
             if all_normal:
                 print('start requester thread')
@@ -131,13 +144,13 @@ def on_message(client, _, msg):
                 thread_request.start()
             elif all_none and not is_funding:
                 print('start funding: ', dict_status_node[payer_id])
+                is_funding = True
                 client.publish('request/' + payee_id, \
                     '{"method":"connect", "params":['
                         '"' + payer_id + '", '
                         '"' + dict_status_node[payer_id]['ipaddr'] + '", ' +\
                         str(dict_status_node[payer_id]['port']) +\
                         ' ]}')
-                is_funding = True
         else:
             all_normal = True
             for node in dict_status_node:
@@ -152,20 +165,28 @@ def on_message(client, _, msg):
                 return
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
+        print('payload=', payload)
 
 
 def response_payer(client, json_msg):
+    global pay_count
+
     if json_msg['result'][0] == 'pay':
         print('pay start')
+        pay_count += 1
 
 
 '''
 {"result": ["invoice", "<BOLT11 invoice>"]}
 '''
 def response_payee(client, json_msg):
+    global is_funding
+
     if json_msg['result'][0] == 'connect':
         if json_msg['result'][1] == 'OK':
             client.publish('request/' + payer_id, '{"method":"openchannel","params":[ "' + payee_id + '", 5000 ]}')
+        else:
+            is_funding = False
     elif json_msg['result'][0] == 'invoice':
         client.publish('request/' + payer_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 

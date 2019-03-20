@@ -51,3 +51,8 @@ class LnNode(metaclass=ABCMeta):
     @abstractmethod
     def pay(self, invoice):
         pass
+
+
+    @abstractmethod
+    def close_mutual(self, node_id):
+        pass
