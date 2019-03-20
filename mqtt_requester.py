@@ -96,10 +96,10 @@ def on_message(client, _, msg):
             print('RESPONSE[' + msg.topic + ']' + payload)
             json_msg = json.loads(payload)
             if msg.topic.endswith(funder_id):
-                response_payer(client, json_msg)
+                response_funder(client, json_msg)
                 pass
             elif msg.topic.endswith(fundee_id):
-                response_payee(client, json_msg)
+                response_fundee(client, json_msg)
                 pass
         elif msg.topic.startswith('result/'):
             #print('RESULT[' + msg.topic + ']' + payload)
@@ -168,7 +168,7 @@ def on_message(client, _, msg):
         print('payload=', payload)
 
 
-def response_payer(client, json_msg):
+def response_funder(client, json_msg):
     global pay_count
 
     if json_msg['result'][0] == 'pay':
@@ -179,7 +179,7 @@ def response_payer(client, json_msg):
 '''
 {"result": ["invoice", "<BOLT11 invoice>"]}
 '''
-def response_payee(client, json_msg):
+def response_fundee(client, json_msg):
     global is_funding
 
     if json_msg['result'][0] == 'connect':
