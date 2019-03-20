@@ -11,8 +11,7 @@ MQTT_PORT = 1883
 
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
-    client.subscribe('status/02c42924185506dafb183391a65d5fe46d7a4d53fe563311d8d2a0ae0537f8de95')
-    #client.subscribe('response/02c42924185506dafb183391a65d5fe46d7a4d53fe563311d8d2a0ae0537f8de95')
+    client.subscribe('response/02c42924185506dafb183391a65d5fe46d7a4d53fe563311d8d2a0ae0537f8de95')
     print('MQTT connected')
 
 
