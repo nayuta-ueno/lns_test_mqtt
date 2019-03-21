@@ -55,6 +55,8 @@ class CLightning(LnNode):
     def get_status(self, num=0):
         try:
             result = self.lnrpc.listpeers()
+            if ('peers' not in result) or (len(result['peers']) == 0):
+                return LnNode.Status.NONE
             peer = result['peers'][num]
             peer_status = ''
             for p in peer['channels']:
