@@ -44,7 +44,7 @@ def on_message(client, _, msg):
         if msg.topic == 'request/' + node_id:
             #print('REQUEST[' + msg.topic + ']' + payload)
             exec_request(client, json.loads(payload))
-        elif msg.topic == 'stop':
+        elif msg.topic == 'stop/' + node_id:
             print('STOP!')
             _killme()
     except:

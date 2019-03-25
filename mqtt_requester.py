@@ -45,17 +45,22 @@ def requester(client):
 def poll_time(client):
     global dict_recv_node
 
-    while True:
+    stop_order = False
+    while not stop_order:
         time.sleep(30)
         if len(dict_recv_node) < 2:
             print('node not found')
-            client.publish('stop', 'node not found')
-            _killme()
+            stop_order = True
+            break
         for node in dict_recv_node:
             if time.time() - dict_recv_node[node] > 60:
                 print('node not exist:' + node)
-                client.publish('stop', 'node not exist:' + node)
-                _killme()
+                stop_order = True
+                break
+    if stop_order:
+        client.publish('stop/' + funder_id, 'node not exist:' + node)
+        client.publish('stop/' + fundee_id, 'node not exist:' + node)
+        _killme()
 
 
 def on_connect(client, user_data, flags, response_code):
@@ -71,7 +76,7 @@ topic:
     'request/' + node_id    : requester --> responser
     'response/' + node_id   : responser ==> requester
     'result/' + node_id     : responser ==> requester
-    'stop'
+    'stop/ + node_id        : requester --> responser'
 '''
 def on_message(client, _, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
