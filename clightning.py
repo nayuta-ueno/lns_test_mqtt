@@ -120,5 +120,5 @@ class CLightning(LnNode):
 
     def close_mutual(self, node_id):
         res = self.lnrpc.close(node_id)
-        res = '{"result": ["closechannel"]}'
+        res = '{"result": ["closechannel"]]}'
         return res
