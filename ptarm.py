@@ -128,7 +128,7 @@ class Ptarm(LnNode):
 
     def open_channel(self, node_id, amount):
         res = self._socket_send('{"method":"fund","params":[ ' + str(amount) + ',0 ]}')
-        res = '{"result": ["invoice","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
+        res = '{"result": ["openchannel","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
         return res
 
 
