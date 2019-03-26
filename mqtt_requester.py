@@ -124,6 +124,7 @@ def on_message(client, _, msg):
             json_msg = json.loads(payload)
             if json_msg['method'] == 'htlc_changed':
                 print('payed:' + str(pay_count) + '  local_msat=' + str(json_msg['local_msat']))
+                pay_count += 1
                 if pay_count >= PAY_COUNT_MAX:
                     pay_count = 0
                     client.publish('request/' + fundee_id, '{"method":"closechannel", "params":[ "' + funder_id + '" ]}')
@@ -190,7 +191,6 @@ def response_funder(client, json_msg):
     global pay_count
 
     if json_msg['result'][0] == 'pay':
-        pay_count += 1
         print('pay start: ', str(pay_count))
 
 
