@@ -31,6 +31,19 @@ def _killme():
     os.kill(os.getpid(), signal.SIGKILL)
 
 
+# senario
+#   1. req[connect to funder] --> fundee
+#   2. fundee res[connect] --> req
+#   3. req[[openchannel to fundee] --> funder
+#   4. wait both status NORMAL
+#   5. req[invoice] --> fundee
+#   6. fundee res[invoice] --> req
+#   7. req[pay] --> funder
+#   8. fundee[htlc_changed] --> req
+#   9. repeat 5..8
+#  10. req[closechannel] --> fundee
+#  11. wait both status NONE
+
 def requester(client):
     global loop_reqester
 
