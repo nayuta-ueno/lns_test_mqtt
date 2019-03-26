@@ -190,8 +190,8 @@ def response_funder(client, json_msg):
     global pay_count
 
     if json_msg['result'][0] == 'pay':
-        print('pay start')
         pay_count += 1
+        print('pay start: ', str(pay_count))
 
 
 '''
