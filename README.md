@@ -22,8 +22,16 @@ lnshieldのテスト用だが、そうでなくても使える。
 
 ## 準備
 
+### MQTT broker
+
 ```
-sudo apt install mosquitto python3-pip
+sudo apt install mosquitto
+```
+
+### requester, responser
+
+```
+sudo apt install python3-pip
 sudo pip3 install -U pip
 sudo pip3 install pylightning paho-mqtt
 ```
