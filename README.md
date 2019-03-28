@@ -44,9 +44,9 @@ sudo pip3 install pylightning paho-mqtt
   2.1 `--rpc-file`でどこかを指定する(ここでは`/tmp/lightningrpc`)
 3. ptarmiganをどこかに立てる
 4. それぞれのノードが立っているところでresponserを起動
-  4.1 c-lightning: `python3 mqtt_responser.py clightning /tmp/lightningrpc`
-  4.2 ptarmigan: `python3 mqtt_responser.py ptarm`
+  4.1 c-lightning: ``python3 mqtt_responser.py clightning /tmp/lightningrpc \`curl ifconfig.io\` 9735``
+  4.2 ptarmigan: `python3 mqtt_responser.py ptarm 127.0.0.1 9735`
 5. requesterを起動
-  5.1 `python3 mqtt_requester [c-lightningのnode_id] [ptarmiganのnode_id]
+  5.1 `python3 mqtt_requester [c-lightningのnode_id] [ptarmiganのnode_id]`
     * 前者がfunder、後者がfundeeになる
 6. 放置
