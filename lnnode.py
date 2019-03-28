@@ -1,15 +1,15 @@
 # encoding: utf-8
 
 from abc import ABCMeta, abstractmethod
-from enum import Enum, auto
+from enum import Enum
 
 
 class LnNode(metaclass=ABCMeta):
     class Status(Enum):
-        NONE = auto()
-        FUNDING = auto()
-        NORMAL = auto()
-        CLOSING = auto()
+        NONE = 0
+        FUNDING = 1
+        NORMAL = 2
+        CLOSING = 3
 
     ipaddr = '127.0.0.1'
     port = 9735
