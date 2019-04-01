@@ -52,16 +52,29 @@ class CLightning(LnNode):
         ONCHAIN
     };
     '''
-    def get_status(self, num=0):
+    def get_status(self, num=-1):
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
                 return LnNode.Status.NONE
+            if num == -1:
+                num = 0
+                for p in result['peers']:
+                    for ch in p['channels']:
+                        #print('status[' + str(num) + ']' + ch['state'])
+                        if ch['state'] != 'ONCHAIN':
+                            peer_status = ch['state']
+                            break
+                    else:
+                        num += 1
+                        continue
+                    break
             peer = result['peers'][num]
             peer_status = ''
-            for p in peer['channels']:
-                if p['state'] != 'ONCHAIN':
-                    peer_status = p['state']
+            for ch in peer['channels']:
+                if ch['state'] != 'ONCHAIN':
+                    peer_status = ch['state']
+                    break
             #print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
