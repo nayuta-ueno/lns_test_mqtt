@@ -10,6 +10,5 @@ JSON=`cat << EOS | jq -e '.'
 EOS
 `
 
-echo ${JSON}
 python3 script/mqtt_pub.py result/$2 "${JSON}"
 
