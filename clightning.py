@@ -87,10 +87,10 @@ class CLightning(LnNode):
                 peer_status == 'FUNDING_SPEND_SEEN':
                 status = LnNode.Status.CLOSING
             else:
-                status = LnNode.Status.NONE
+                status = LnNode.Status.UNKNOWN
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            status = LnNode.Status.NONE
+            status = LnNode.Status.UNKNOWN
         return status
 
 

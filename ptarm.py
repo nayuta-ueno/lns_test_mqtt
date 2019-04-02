@@ -72,7 +72,7 @@ class Ptarm(LnNode):
                 peer_status == 'revoked transaction close':
                 status = LnNode.Status.CLOSING
             else:
-                status = LnNode.Status.NONE
+                status = LnNode.Status.UNKNOWN
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             status = LnNode.Status.NONE

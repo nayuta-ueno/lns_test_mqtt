@@ -6,6 +6,7 @@ from enum import Enum
 
 class LnNode(metaclass=ABCMeta):
     class Status(Enum):
+        UNKNOWN = -1
         NONE = 0
         FUNDING = 1
         NORMAL = 2
