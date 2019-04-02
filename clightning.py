@@ -56,19 +56,20 @@ class CLightning(LnNode):
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
-                return LnNode.Status.UNKNOWN
+                return LnNode.Status.NONE
             if num == -1:
                 num = 0
                 for p in result['peers']:
                     for ch in p['channels']:
-                        #print('status[' + str(num) + ']' + ch['state'])
+                        print('status[' + str(num) + ']' + ch['state'])
                         if ch['state'] != 'ONCHAIN':
-                            peer_status = ch['state']
                             break
                     else:
                         num += 1
                         continue
                     break
+            if num >= len(result['peers']):
+                return LnNode.Status.NONE
             peer = result['peers'][num]
             peer_status = ''
             for ch in peer['channels']:
