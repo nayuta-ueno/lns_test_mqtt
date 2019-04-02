@@ -24,9 +24,11 @@ def on_message(client, _, msg):
 
     if PEEK_ID not in msg.topic:
         return
-    if 'status' in msg.topic:
-        payload = str(msg.payload, 'utf-8')
-        json_msg = json.loads(payload)
+    payload = str(msg.payload, 'utf-8')
+    json_msg = json.loads(payload)
+    #print('topic: ' + msg.topic)
+    if msg.topic.find('status') != -1:
+        #print('status: ' + payload)
         if json_msg['status'] == 'Status.NORMAL':
             mark = 'n'
         elif json_msg['status'] == 'Status.CLOSING':
@@ -38,12 +40,17 @@ def on_message(client, _, msg):
         else:
             mark = '.'
         print(mark, end='', flush=True)
-        return
-    payload = str(msg.payload, 'utf-8')
-    print('[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']payload=' + payload, ' find=', str(payload.find('status')))
-    if payload.find('openchannel') != -1:
-        count += 1
-        print('count=' + str(count) + '  ' + payload)
+    elif msg.topic.find('response') != -1:
+        #print('response: ' + payload);
+        print('\n[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']response=' + json_msg['result'][0])
+        if json_msg['method'] == 'openchannel':
+            count += 1
+            print('count=' + str(count) + '  ' + payload)
+    elif msg.topic.find('result') != -1:
+        print('result: ' + payload);
+        print('\n[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']result=' + json_msg['method'])
+    elif msg.topic.find('request') != -1:
+        print('\n[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']request=' + json_msg['method'])
 
 
 def main():
