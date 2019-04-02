@@ -56,7 +56,7 @@ class CLightning(LnNode):
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
-                return LnNode.Status.NONE
+                return LnNode.Status.UNKNOWN
             if num == -1:
                 num = 0
                 for p in result['peers']:
@@ -87,7 +87,7 @@ class CLightning(LnNode):
                 peer_status == 'FUNDING_SPEND_SEEN':
                 status = LnNode.Status.CLOSING
             else:
-                status = LnNode.Status.UNKNOWN
+                status = LnNode.Status.NONE
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             status = LnNode.Status.UNKNOWN
