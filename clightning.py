@@ -111,7 +111,17 @@ class CLightning(LnNode):
 
 
     def connect(self, node_id, ipaddr, port):
-        pass
+        res = self.lnrpc.connect(node_id, ipaddr, port)
+        print('connect=', res)
+        res = '{"result": ["connect","OK"]}'
+        return res
+
+
+    def disconnect(self, node_id):
+        res = self.lnrpc.disconnect(node_id)
+        print('disconnect=', res)
+        res = '{"result": ["disconnect","OK"]}'
+        return res
 
 
     def open_channel(self, node_id, amount):

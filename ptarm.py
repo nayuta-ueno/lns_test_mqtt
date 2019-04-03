@@ -4,6 +4,7 @@ import socket
 import sys
 import json
 import traceback
+import time
 
 from lnnode import LnNode
 
@@ -127,8 +128,13 @@ class Ptarm(LnNode):
 
 
     def open_channel(self, node_id, amount):
-        res = self._socket_send('{"method":"fund","params":[ ' + str(amount) + ',0 ]}')
-        res = '{"result": ["openchannel","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
+        time.sleep(3)       #wait init exchange
+        cmd = '{"method":"fund","params":["' + node_id + '","0.0.0.0",0,"0000000000000000000000000000000000000000000000000000000000000000",0,' + str(amount) + ',0,0,0 ]}'
+        print ('cmd= ' + cmd)
+        response = self._socket_send(cmd)
+        jrpc = json.loads(response.decode('utf-8'))
+        print('fund res=' + response.decode('utf-8'))
+        res = '{"result": ["openchannel","OK"]}'
         return res
 
 

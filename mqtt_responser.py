@@ -31,7 +31,7 @@ def on_connect(client, user_data, flags, response_code):
 
     del user_data, flags, response_code
     node_id, _ = ln_node.check_status()
-    print('node_id=' + node_id)
+    print('node_id= ' + node_id)
     client.subscribe('#')
     th = threading.Thread(target=poll_status, args=(client,), name='poll_status')
     th.start()
