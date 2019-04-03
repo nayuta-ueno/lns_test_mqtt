@@ -43,9 +43,9 @@ def on_message(client, _, msg):
     elif msg.topic.find('response') != -1:
         #print('response: ' + payload);
         print('\n[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']response=' + json_msg['result'][0])
-        if json_msg['method'] == 'openchannel':
+        if json_msg['result'][0] == 'openchannel':
             count += 1
-            print('count=' + str(count) + '  ' + payload)
+            print('   open count=' + str(count) + '  ' + payload)
     elif msg.topic.find('result') != -1:
         print('result: ' + payload);
         print('\n[' + datetime.now().strftime("%Y/%m/%d %H:%M:%S") + ']result=' + json_msg['method'])
