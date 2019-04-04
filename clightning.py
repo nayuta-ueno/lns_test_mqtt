@@ -61,7 +61,7 @@ class CLightning(LnNode):
                 num = 0
                 for p in result['peers']:
                     for ch in p['channels']:
-                        print('status[' + str(num) + ']' + ch['state'])
+                        # print('status[' + str(num) + ']' + ch['state'])
                         if ch['state'] != 'ONCHAIN':
                             break
                     else:
@@ -76,7 +76,7 @@ class CLightning(LnNode):
                 if ch['state'] != 'ONCHAIN':
                     peer_status = ch['state']
                     break
-            #print('(status=', peer_status + ')')
+            # print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'CHANNELD_AWAITING_LOCKIN':

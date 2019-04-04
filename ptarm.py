@@ -61,7 +61,7 @@ class Ptarm(LnNode):
                 return LnNode.Status.NONE
             peer = jrpc['result']['peers'][num]
             peer_status = peer['status']
-            #print('(status=', peer_status + ')')
+            # print('(status=', peer_status + ')')
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'establishing':
@@ -89,7 +89,7 @@ class Ptarm(LnNode):
             jrpc = json.loads(response.decode('utf-8'))
             node = jrpc['result']['node_id']
             for peer in jrpc['result']['peers']:
-                #print('status=' + peer['status'])
+                # print('status=' + peer['status'])
                 if peer['status'] == 'normal operation':
                     result = True
                     break
@@ -133,8 +133,10 @@ class Ptarm(LnNode):
         print ('cmd= ' + cmd)
         response = self._socket_send(cmd)
         jrpc = json.loads(response.decode('utf-8'))
-        print('fund res=' + response.decode('utf-8'))
-        res = '{"result": ["openchannel","OK"]}'
+        if ('result' in jrpc) and (jrpc['result'] == 'Progressing'):
+            res = '{"result": ["openchannel","OK"]}'
+        else:
+            res = '{"result": ["openchannel","NG"]}'
         return res
 
 
