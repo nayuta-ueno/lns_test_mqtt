@@ -99,6 +99,7 @@ class Ptarm(LnNode):
         return node, result
 
 
+    # result[1] = "OK" or "NG"
     def connect(self, node_id, ipaddr, port):
         jcmd = '{"method":"connect","params":["' + node_id + '","' + ipaddr + '",' + str(port) + ']}'
         print(jcmd)
@@ -115,6 +116,7 @@ class Ptarm(LnNode):
         return res
 
 
+    # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
         jcmd = '{"method":"disconnect","params":["' + node_id + ',"0.0.0.0",0"]}'
         print(jcmd)
@@ -127,34 +129,46 @@ class Ptarm(LnNode):
         return res
 
 
+    # result[1] = "OK" or "NG"
     def open_channel(self, node_id, amount):
+        res = ''
         time.sleep(3)       #wait init exchange
         cmd = '{"method":"fund","params":["' + node_id + '","0.0.0.0",0,"0000000000000000000000000000000000000000000000000000000000000000",0,' + str(amount) + ',0,0,0 ]}'
-        print ('cmd= ' + cmd)
+        print('cmd= ' + cmd)
         response = self._socket_send(cmd)
+        print('result= ' + response.decode('utf-8'));
         jrpc = json.loads(response.decode('utf-8'))
-        if ('result' in jrpc) and (jrpc['result'] == 'Progressing'):
-            res = '{"result": ["openchannel","OK"]}'
+        if ('result' in jrpc) and (jrpc['result']['status'] == 'Progressing'):
+            while True:
+                st = self.get_status()
+                if st == LnNode.Status.FUNDING:
+                    res = '{"result": ["openchannel","OK"]}'
+                    break
+                print('  funding start check: ' + str(st))
+                time.sleep(1)
         else:
             res = '{"result": ["openchannel","NG"]}'
         return res
 
 
+    # result[1] = BOLT11 or "NG"
     def get_invoice(self, amount_msat):
         res = self._socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
         res = '{"result": ["invoice","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def pay(self, invoice):
         res = self._socket_send('{"method":"routepay","params":["' + invoice + '",0]}')
-        res = '{"result": ["pay"]}'
+        res = '{"result": ["pay","OK"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
         res = self._socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
-        res = '{"result": ["closechannel"]}'
+        res = '{"result": ["closechannel","OK"]}'
         return res
 
 

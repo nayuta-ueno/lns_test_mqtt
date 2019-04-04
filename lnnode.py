@@ -31,29 +31,31 @@ class LnNode(metaclass=ABCMeta):
         pass
 
 
+    # result[1] = "OK" or "NG"
     @abstractmethod
     def connect(self, node_id, ipaddr, port):
         pass
 
 
+    # result[1] = "OK" or "NG"
     @abstractmethod
     def open_channel(self, node_id, amount):
         pass
 
 
-    '''
-    {"result": ["invoice", "<BOLT11 invoice>"]}
-    '''
+    # result[1] = BOLT11 or "NG"
     @abstractmethod
     def get_invoice(self, amount_msat):
         pass
 
 
+    # result[1] = "OK" or "NG"
     @abstractmethod
     def pay(self, invoice):
         pass
 
 
+    # result[1] = "OK" or "NG"
     @abstractmethod
     def close_mutual(self, node_id):
         pass

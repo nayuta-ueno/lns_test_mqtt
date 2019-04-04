@@ -110,41 +110,72 @@ class CLightning(LnNode):
         return node, result
 
 
+    # result[1] = "OK" or "NG"
     def connect(self, node_id, ipaddr, port):
-        res = self.lnrpc.connect(node_id, ipaddr, port)
-        print('connect=', res)
-        res = '{"result": ["connect","OK"]}'
+        try:
+            res = self.lnrpc.connect(node_id, ipaddr, port)
+            print('connect=', res)
+            res = '{"result": ["connect","OK"]}'
+        except:
+            print('fail connect')
+            res = '{"result": ["connect","NG"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
-        res = self.lnrpc.disconnect(node_id)
-        print('disconnect=', res)
-        res = '{"result": ["disconnect","OK"]}'
+        try:
+            res = self.lnrpc.disconnect(node_id)
+            print('disconnect=', res)
+            res = '{"result": ["disconnect","OK"]}'
+        except:
+            print('fail disconnect')
+            res = '{"result": ["disconnect","NG"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def open_channel(self, node_id, amount):
-        res = self.lnrpc.fundchannel(node_id, amount)
-        #print('open_channel=', res)
-        res = '{"result": ["openchannel","' + res['txid'] + '"]}'
+        try:
+            res = self.lnrpc.fundchannel(node_id, amount)
+            #print('open_channel=', res)
+            res = '{"result": ["openchannel","OK"]}'
+        except:
+            print('fail open_channel')
+            res = '{"result": ["openchannel","NG"]}'
         return res
 
 
+    # result[1] = BOLT11 or "NG"
     def get_invoice(self, amount_msat):
-        res = self.lnrpc.invoice(amount_msat, "lbl{}".format(random.random()), "testpayment")
-        res = '{"result": ["invoice","' + res['bolt11'] + '"]}'
+        try:
+            res = self.lnrpc.invoice(amount_msat, "lbl{}".format(random.random()), "testpayment")
+            res = '{"result": ["invoice","' + res['bolt11'] + '"]}'
+        except:
+            print('fail invoice')
+            res = '{"result": ["invoice","NG"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def pay(self, invoice):
-        res = self.lnrpc.pay(invoice)
-        print('pay=', res)
-        res = '{"result": ["pay"]}'
+        try:
+            res = self.lnrpc.pay(invoice)
+            print('pay=', res)
+            res = '{"result": ["pay","OK"]}'
+        except:
+            print('fail pay')
+            res = '{"result": ["pay","NG"]}'
         return res
 
 
+    # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
-        res = self.lnrpc.close(node_id)
-        res = '{"result": ["closechannel"]]}'
+        try:
+            res = self.lnrpc.close(node_id)
+            print('close=', res)
+            res = '{"result": ["closechannel","OK"]}'
+        except:
+            print('fail closechannel')
+            res = '{"result": ["closechannel","NG"]}'
         return res
