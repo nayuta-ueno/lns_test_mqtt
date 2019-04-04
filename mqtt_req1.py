@@ -32,8 +32,12 @@ MQTT_PORT = 1883
 PAY_COUNT_MAX = 5
 
 # global variable
-funder_id = ''
-fundee_id = ''
+NODE_NUM = 2
+FUNDER=0
+FUNDEE=1
+NODE_LABEL = ['funder', 'fundee']
+
+node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
 thread_request = None
@@ -72,13 +76,15 @@ def on_message(client, _, msg):
 
 
 # check status health
+#   起動して30秒以内にテスト対象のnode全部がstatusを送信すること
+#   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
 def poll_time(client):
     global dict_recv_node
 
     stop_order = False
     while not stop_order:
         time.sleep(30)
-        if len(dict_recv_node) < 2:
+        if len(dict_recv_node) < NODE_NUM:
             print('node not found')
             stop_order = True
             break
@@ -101,19 +107,20 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice: payee
             print('send to payee: invoice')
-            client.publish('request/' + fundee_id, '{"method":"invoice","params":[ 1000,0 ]}')
+            client.publish('request/' + node_id[FUNDEE], '{"method":"invoice","params":[ 1000,0 ]}')
             pay_count += 1
-            time.sleep(10)
+            time.sleep(10)      # 送金の完了にかかわらず要求する。実環境に合わせて時間を調整しよう。
         else:
+            # 一定回数送金要求したらチャネルを閉じる
             pay_count = 0
-            client.publish('request/' + fundee_id, '{"method":"closechannel", "params":[ "' + funder_id + '" ]}')
+            client.publish('request/' + node_id[FUNDEE], '{"method":"closechannel", "params":[ "' + node_id[FUNDER] + '" ]}')
             print('CLOSE CHANNEL')
             break
     print('exit requester')
 
 
 # topic
-#   check our testing node_id
+#   check our testing node_ids
 def proc_topic(client, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
 
@@ -121,14 +128,15 @@ def proc_topic(client, msg):
     mine = False
     recv_id = ''
     try:
-        #node check(need 2 nodes)
         if msg.topic.startswith('response/') or msg.topic.startswith('status/'):
             if msg.topic.rfind('/') != -1:
                 recv_id = msg.topic[msg.topic.rfind('/') + 1:]
-                if (funder_id == recv_id) or (fundee_id == recv_id):
-                    mine = True
-                    dict_recv_node[recv_id] = time.time()
-        if mine and (len(dict_recv_node) == 2):
+                for i in range(NODE_NUM):
+                    if node_id[i] == recv_id:
+                        mine = True
+                        dict_recv_node[recv_id] = time.time()
+                        break
+        if mine and (len(dict_recv_node) == NODE_NUM):
             ret = True
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
@@ -189,14 +197,7 @@ def proc_status(client, msg, recv_id):
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
             elif all_none and is_funding == 0:
-                print('REQ: connect: ' + fundee_id + ' ==> ' + funder_id)
-                is_funding = 1
-                client.publish('request/' + fundee_id, \
-                    '{"method":"connect", "params":['
-                        '"' + funder_id + '", '
-                        '"' + dict_status_node[funder_id]['ipaddr'] + '", ' +\
-                        str(dict_status_node[funder_id]['port']) +\
-                        ' ]}')
+                proc_status_funding(client)
             if all_funding:
                 is_funding = 2
         else:
@@ -215,12 +216,27 @@ def proc_status(client, msg, recv_id):
         print('traceback.format_exc():\n%s' % traceback.format_exc())
 
 
+#################################################################################
+
+def proc_status_funding(client):
+    global is_funding
+
+    print('REQ: connect: ' + node_id[FUNDEE] + ' ==> ' + node_id[FUNDER])
+    is_funding = 1
+    funder_ipaddr = dict_status_node[node_id[FUNDER]]['ipaddr']
+    funder_port = dict_status_node[node_id[FUNDER]]['port']
+    client.publish('request/' + node_id[FUNDEE], \
+        '{"method":"connect", "params":['
+            '"' + node_id[FUNDER] + '", '
+            '"' + funder_ipaddr + '", ' + str(funder_port) + ' ]}')
+
+
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
     ret = True
-    if msg.topic.endswith(funder_id):
+    if msg.topic.endswith(node_id[FUNDER]):
         ret = message_response_funder(client, json_msg)
-    elif msg.topic.endswith(fundee_id):
+    elif msg.topic.endswith(node_id[FUNDEE]):
         ret = message_response_fundee(client, json_msg)
     else:
         ret = False
@@ -256,7 +272,7 @@ def message_response_fundee(client, json_msg):
     ret = True
     if json_msg['result'][0] == 'connect':
         if json_msg['result'][1] == 'OK':
-            client.publish('request/' + funder_id, '{"method":"openchannel","params":[ "' + fundee_id + '", 50000 ]}')
+            client.publish('request/' + node_id[FUNDER], '{"method":"openchannel","params":[ "' + node_id[FUNDEE] + '", 50000 ]}')
         else:
             print('fail connect')
             is_funding = 0
@@ -267,8 +283,10 @@ def message_response_fundee(client, json_msg):
             print('fail invoice')
             ret = False
         else:
-            client.publish('request/' + funder_id, '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
+            client.publish('request/' + node_id[FUNDER], '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
     return ret
+
+#################################################################################
 
 
 # message: topic="status/#"
@@ -283,8 +301,9 @@ def message_status(client, json_msg, msg, recv_id):
 
 def _killme(client):
     os.kill(os.getpid(), signal.SIGKILL)
-    client.publish('stop/' + funder_id, 'stop all')
-    client.publish('stop/' + fundee_id, 'stop all')
+    for node in node_id:
+        print('stop: ' + node)
+        client.publish('stop/' + node, 'stop all')
 
 
 # def linux_cmd_exec(cmd):
@@ -308,11 +327,13 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('usage: ' + sys.argv[0] + ' funder_id fundee_id')
+        print('usage: ' + sys.argv[0] + ' node_id[FUNDER] node_id[FUNDEE]')
         sys.exit()
-    funder_id = sys.argv[1]
-    fundee_id = sys.argv[2]
-    if len(funder_id) != 66 or len(fundee_id) != 66:
+    node_id[FUNDER] = sys.argv[1]
+    node_id[FUNDEE] = sys.argv[2]
+    if len(node_id[FUNDER]) != 66 or len(node_id[FUNDEE]) != 66:
         print('invalid length')
         sys.exit()
+    print(NODE_LABEL[FUNDER] + '= ' + node_id[FUNDER])
+    print(NODE_LABEL[FUNDEE] + '= ' + node_id[FUNDEE])
     main()

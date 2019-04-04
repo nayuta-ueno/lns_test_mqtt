@@ -11,7 +11,8 @@ import os
 import signal
 
 from lnnode import LnNode
-import ptarm
+from ptarm import Ptarm
+from ptarmj import PtarmJ
 import clightning
 
 
@@ -85,16 +86,6 @@ def exec_request(client, json_msg):
         client.publish('response/' + node_id, res)
 
 
-def linux_cmd_exec(cmd):
-    print('cmd:', cmd.split(' '))
-    ret = ''
-    try:
-        ret = subprocess.check_output(cmd.split(' ')).strip()
-    except subprocess.CalledProcessError as e:
-        print('!!! error happen(errcode=%d) !!!' % e.returncode)
-    return ret
-
-
 def main():
     mqtt_client = paho.mqtt.client.Client(protocol=paho.mqtt.client.MQTTv311)
     mqtt_client.connect(MQTT_HOST, port=MQTT_PORT, keepalive=60)
@@ -114,7 +105,9 @@ if __name__ == '__main__':
     ipaddr = sys.argv[2]
     port = int(sys.argv[3])
     if sys.argv[1] == 'ptarm':
-        ln_node = ptarm.Ptarm()
+        ln_node = Ptarm()
+    elif sys.argv[1] == 'ptarmj':
+        ln_node = PtarmJ()
     elif sys.argv[1] == 'clightning':
         ln_node = clightning.CLightning()
         if len(sys.argv) >= 5:
