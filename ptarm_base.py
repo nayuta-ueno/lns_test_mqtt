@@ -52,15 +52,18 @@ class PtarmBase(LnNode):
         p_str_stat = "???";
     }
     '''
-    def get_status(self, num=0):
+    def get_status(self, peer):
         try:
             jcmd = '{"method":"getinfo","params":[]}'
             response = self._socket_send(jcmd)
             jrpc = json.loads(response.decode('utf-8'))
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
                 return LnNode.Status.NONE
-            peer = jrpc['result']['peers'][num]
-            peer_status = peer['status']
+            peer_status = ''
+            for p in jrpc['result']['peers']:
+                if p['node_id'] == peer:
+                    peer_status = p['status']
+                    break
             # print('(status=', peer_status + ')')
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
@@ -80,23 +83,15 @@ class PtarmBase(LnNode):
         return status
 
 
-    def check_status(self):
-        node = ''
-        result = False
+    def get_nodeid(self):
         try:
             jcmd = '{"method":"getinfo","params":[]}'
             response = self._socket_send(jcmd)
             jrpc = json.loads(response.decode('utf-8'))
-            node = jrpc['result']['node_id']
-            for peer in jrpc['result']['peers']:
-                # print('status=' + peer['status'])
-                if peer['status'] == 'normal operation':
-                    result = True
-                    break
+            return jrpc['result']['node_id']
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             sys.exit()
-        return node, result
 
 
     # result[1] = "OK" or "NG"

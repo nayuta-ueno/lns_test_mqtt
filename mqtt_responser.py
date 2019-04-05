@@ -21,6 +21,7 @@ MQTT_PORT = 1883
 
 ln_node = ''
 node_id = ''
+peer_node = []
 
 
 def _killme():
@@ -31,7 +32,7 @@ def on_connect(client, user_data, flags, response_code):
     global node_id
 
     del user_data, flags, response_code
-    node_id, _ = ln_node.check_status()
+    node_id = ln_node.get_nodeid()
     print('node_id= ' + node_id)
     client.subscribe('#')
     th = threading.Thread(target=poll_status, args=(client,), name='poll_status')
@@ -45,6 +46,9 @@ def on_message(client, _, msg):
         if msg.topic == 'request/' + node_id:
             #print('REQUEST[' + msg.topic + ']' + payload)
             exec_request(client, json.loads(payload))
+        elif msg.topic == 'notify/' + node_id:
+            #print('NOTIFY[' + msg.topic + ']' + payload)
+            exec_notify(client, json.loads(payload))
         elif msg.topic == 'stop/' + node_id:
             print('STOP!')
             _killme()
@@ -54,9 +58,10 @@ def on_message(client, _, msg):
 
 def poll_status(client):
     while True:
-        status = ln_node.get_status()
-        #print(str(status))
-        client.publish('status/' + node_id, '{"status": "' + str(status) + '", "ipaddr": "' + ln_node.ipaddr + '", "port": ' + str(ln_node.port) + '}')
+        for peer in peer_node:
+            status = ln_node.get_status(peer)
+            #print(str(status))
+            client.publish('status/' + node_id, '{"status": "' + str(status) + '", "ipaddr": "' + ln_node.ipaddr + '", "port": ' + str(ln_node.port) + ', "peer": "' + peer + '"}')
         time.sleep(10)
 
 
@@ -65,25 +70,36 @@ def exec_request(client, json_msg):
     params = json_msg['params']
     res = ''
     if method == 'invoice':
-        if ln_node.get_status() == LnNode.Status.NORMAL:
-            res = ln_node.get_invoice(params[0])
+        res = ln_node.get_invoice(params[0])
     elif method == 'pay':
-        if ln_node.get_status() == LnNode.Status.NORMAL:
-            res = ln_node.pay(params[0])
+        res = ln_node.pay(params[0])
     elif method == 'connect':
-        if ln_node.get_status() == LnNode.Status.NONE:
-            res = ln_node.connect(params[0], params[1], params[2])
+        res = ln_node.connect(params[0], params[1], params[2])
     elif method == 'openchannel':
-        if ln_node.get_status() == LnNode.Status.NONE:
+        if ln_node.get_status(params[0]) == LnNode.Status.NONE:
             res = ln_node.open_channel(params[0], params[1])
     elif method == 'closechannel':
-        if ln_node.get_status() == LnNode.Status.NORMAL:
+        if ln_node.get_status(params[0]) == LnNode.Status.NORMAL:
             res = ln_node.close_mutual(params[0])
     else:
         print('method=', method)
     if len(res) > 0:
         print('res=' + res)
         client.publish('response/' + node_id, res)
+
+
+def exec_notify(client, json_msg):
+    global peer_node
+
+    if 'connect' in json_msg:
+        for node in json_msg['connect']:
+            if node[0] == node_id:
+                if node[0] not in peer_node:
+                    peer_node.append(node[1])
+            elif node[1] == node_id:
+                if node[1] not in peer_node:
+                    peer_node.append(node[0])
+        #print('peer_node: ', peer_node)
 
 
 def main():
@@ -100,7 +116,7 @@ if __name__ == '__main__':
         print('    [ptarm option]none')
         print('    [clightning option]rpc-file')
         sys.exit()
-    
+
     argv = None
     ipaddr = sys.argv[2]
     port = int(sys.argv[3])

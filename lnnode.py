@@ -22,12 +22,12 @@ class LnNode(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def get_status(self, num=0):
+    def get_status(self, peer):
         pass
 
 
     @abstractmethod
-    def check_status(self):
+    def get_nodeid(self):
         pass
 
 

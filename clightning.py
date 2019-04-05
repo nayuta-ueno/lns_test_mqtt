@@ -52,30 +52,17 @@ class CLightning(LnNode):
         ONCHAIN
     };
     '''
-    def get_status(self, num=-1):
+    def get_status(self, peer):
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
                 return LnNode.Status.NONE
-            if num == -1:
-                num = 0
-                for p in result['peers']:
-                    for ch in p['channels']:
-                        # print('status[' + str(num) + ']' + ch['state'])
-                        if ch['state'] != 'ONCHAIN':
-                            break
-                    else:
-                        num += 1
-                        continue
-                    break
-            if num >= len(result['peers']):
-                return LnNode.Status.NONE
-            peer = result['peers'][num]
             peer_status = ''
-            for ch in peer['channels']:
-                if ch['state'] != 'ONCHAIN':
-                    peer_status = ch['state']
-                    break
+            for p in result['peers']:
+                if p['id'] == peer:
+                    for ch in p['channels']:
+                        peer_status = ch['state']
+                        break
             # print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
@@ -95,19 +82,14 @@ class CLightning(LnNode):
         return status
 
 
-    def check_status(self):
+    def get_nodeid(self):
         node = ''
-        result = False
         try:
             info = self.lnrpc.getinfo()
-            node = info['id']
-            status = self.get_status()
-            if status == LnNode.Status.NORMAL:
-                result = True
+            return info['id']
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             sys.exit()
-        return node, result
 
 
     # result[1] = "OK" or "NG"

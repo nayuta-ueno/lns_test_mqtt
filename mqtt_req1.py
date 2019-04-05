@@ -20,6 +20,8 @@ import json
 import traceback
 import os
 import signal
+import random
+import string
 
 import paho.mqtt.client
 import socket
@@ -29,21 +31,29 @@ import threading
 # MQTT broker
 MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
 MQTT_PORT = 1883
-PAY_COUNT_MAX = 5
 
-# global variable
-TESTNAME = 'test1'      # publish my stoppage order
+# random requester name
+TESTNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
+
+# const variable
+FUNDING_WAIT_MAX = 10   # funding_wait_countの上限
+
+# const variable
 NODE_NUM = 2
 FUNDER=0
 FUNDEE=1
 NODE_LABEL = ['funder', 'fundee']
+PAY_COUNT_MAX = 5
+NODE_CONNECT = [ [FUNDER, FUNDEE] ]
 
+# global variable
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
 thread_request = None
 loop_reqester = True
 is_funding = 0      # 0:none, 1:connecting, 2:funding
+funding_wait_count = 0      # is_fundingが1になったままのカウント数
 funding_count = 0
 pay_count = 0
 
@@ -52,8 +62,9 @@ pay_count = 0
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     client.subscribe('#')
-    #th = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
-    #th.start()
+    th = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
+    th = threading.Thread(target=notifier, args=(client,), name='notifier', daemon=True)
+    th.start()
     print('MQTT connected')
 
 
@@ -76,15 +87,28 @@ def on_message(client, _, msg):
     proc_status(client, msg, recv_id)
 
 
+def notifier(client):
+    while True:
+        # notify
+        conn_dict = { "connect": _json_node_connect() }
+        for node in node_id:
+            # print('notify: ' + node)
+            client.publish('notify/' + node, json.dumps(conn_dict))
+        time.sleep(5)
+
+
+
 # check status health
 #   起動して30秒以内にテスト対象のnode全部がstatusを送信すること
 #   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
 def poll_time(client):
-    global dict_recv_node
+    global dict_recv_node, funding_wait_count
 
     stop_order = False
     while not stop_order:
         time.sleep(30)
+
+        # check health
         if len(dict_recv_node) < NODE_NUM:
             print('node not found')
             stop_order = True
@@ -92,6 +116,13 @@ def poll_time(client):
         for node in dict_recv_node:
             if time.time() - dict_recv_node[node] > 60:
                 print('node not exist:' + node)
+                stop_order = True
+                break
+        if is_funding == 1:
+            funding_wait_count += 1
+            print('funding_wait_count=' + str(funding_wait_count))
+            if funding_wait_count > FUNDING_WAIT_MAX:
+                print('funding not started long time')
                 stop_order = True
                 break
     if stop_order:
@@ -311,6 +342,14 @@ def _stop(client):
 
 def _killme():
     os.kill(os.getpid(), signal.SIGKILL)
+
+
+def _json_node_connect():
+    json_conn = []
+    for lists in NODE_CONNECT:
+        pair = [ node_id[lists[0]], node_id[lists[1]] ]
+        json_conn.append(pair)
+    return json_conn
 
 
 # def linux_cmd_exec(cmd):

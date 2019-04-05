@@ -35,7 +35,7 @@ class Ptarm(PtarmBase):
         jrpc = json.loads(response.decode('utf-8'))
         if ('result' in jrpc) and (jrpc['result']['status'] == 'Progressing'):
             while True:
-                st = self.get_status()
+                st = self.get_status(node_id)
                 if st == LnNode.Status.FUNDING:
                     print('  status:funding')
                     res = '{"result": ["openchannel","OK"]}'
