@@ -97,7 +97,6 @@ def notifier(client):
         time.sleep(5)
 
 
-
 # check status health
 #   起動して30秒以内にテスト対象のnode全部がstatusを送信すること
 #   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
@@ -206,40 +205,43 @@ def proc_payload(client, msg, recv_id):
 
 # process for status
 def proc_status(client, msg, recv_id):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
+    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count, funded_block_count
 
-    if len(dict_status_node) != 2:
+    if len(dict_status_node) != NODE_NUM:
         return
 
     try:
         if thread_request is None:
-            #need 2 normal status nodes
             all_normal = True
             all_none = True
             all_funding = True
             for node in dict_status_node:
-                if dict_status_node[node]['status'] != 'Status.NORMAL':
-                    all_normal = False
-                if dict_status_node[node]['status'] != 'Status.NONE':
-                    all_none = False
-                if dict_status_node[node]['status'] != 'Status.FUNDING':
-                    all_funding = False
+                for status in dict_status_node[node]['status']:
+                    # print('status=' + status[0])
+                    if status[0] != 'Status.NORMAL':
+                        all_normal = False
+                    if status[0] != 'Status.NONE':
+                        all_none = False
+                    if status[0] != 'Status.FUNDING':
+                        all_funding = False
             if all_normal:
                 print('start requester thread')
-                is_funding = 0
+                funded_block_count = getblockcount()    #announcement計測用
+                is_funding = FUNDING_NONE
                 loop_reqester = True
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
-            elif all_none and is_funding == 0:
-                proc_status_funding(client)
+            elif all_none and is_funding == FUNDING_NONE:
+                proc_connect_start(client)
             if all_funding:
-                is_funding = 2
+                is_funding = FUNDING_NOW
         else:
             all_normal = True
             for node in dict_status_node:
-                if dict_status_node[node]['status'] != 'Status.NORMAL':
-                    all_normal = False
-                    break
+                for status in dict_status_node[node]['status']:
+                    if status[0] != 'Status.NORMAL':
+                        all_normal = False
+                        break
             if not all_normal:
                 print('stop requester thread')
                 loop_reqester = False
