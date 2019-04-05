@@ -4,6 +4,7 @@
 
 import socket
 import sys
+import os
 import json
 import traceback
 
@@ -80,7 +81,7 @@ class CLightning(LnNode):
                 status = LnNode.Status.NONE
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            status = LnNode.Status.UNKNOWN
+            os.kill(os.getpid(), signal.SIGKILL)
         return status
 
 
@@ -91,7 +92,7 @@ class CLightning(LnNode):
             return info['id']
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            sys.exit()
+            os.kill(os.getpid(), signal.SIGKILL)
 
 
     # result[1] = "OK" or "NG"
@@ -99,10 +100,10 @@ class CLightning(LnNode):
         try:
             res = self.lnrpc.connect(node_id, ipaddr, port)
             print('connect=', res)
-            res = '{"result": ["connect","OK"]}'
+            res = '{"result": ["connect","OK","' + node_id + '"]}'
         except:
             print('fail connect')
-            res = '{"result": ["connect","NG"]}'
+            res = '{"result": ["connect","NG","' + node_id + '"]}'
         return res
 
 
@@ -111,10 +112,10 @@ class CLightning(LnNode):
         try:
             res = self.lnrpc.disconnect(node_id)
             print('disconnect=', res)
-            res = '{"result": ["disconnect","OK"]}'
+            res = '{"result": ["disconnect","OK","' + node_id + '"]}'
         except:
             print('fail disconnect')
-            res = '{"result": ["disconnect","NG"]}'
+            res = '{"result": ["disconnect","NG","' + node_id + '"]}'
         return res
 
 
@@ -122,11 +123,11 @@ class CLightning(LnNode):
     def open_channel(self, node_id, amount):
         try:
             res = self.lnrpc.fundchannel(node_id, amount)
-            #print('open_channel=', res)
-            res = '{"result": ["openchannel","OK"]}'
+            print('open_channel=', res)
+            res = '{"result": ["openchannel","OK","' + node_id + '"]}'
         except:
             print('fail open_channel')
-            res = '{"result": ["openchannel","NG"]}'
+            res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
 
 
@@ -134,6 +135,7 @@ class CLightning(LnNode):
     def get_invoice(self, amount_msat):
         try:
             res = self.lnrpc.invoice(amount_msat, "lbl{}".format(random.random()), "testpayment")
+            print('invoice=', res)
             res = '{"result": ["invoice","' + res['bolt11'] + '"]}'
         except:
             print('fail invoice')
@@ -158,8 +160,8 @@ class CLightning(LnNode):
         try:
             res = self.lnrpc.close(node_id)
             print('close=', res)
-            res = '{"result": ["closechannel","OK"]}'
+            res = '{"result": ["closechannel","OK","' + node_id + '"]}'
         except:
             print('fail closechannel')
-            res = '{"result": ["closechannel","NG"]}'
+            res = '{"result": ["closechannel","NG","' + node_id + '"]}'
         return res

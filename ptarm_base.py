@@ -2,9 +2,11 @@
 
 import socket
 import sys
+import os
 import json
 import traceback
 import time
+import subprocess
 
 from lnnode import LnNode
 
@@ -48,6 +50,9 @@ class PtarmBase(LnNode):
     case LN_STATUS_CLOSE_REVOKED:
         p_str_stat = "revoked transaction close";
         break;
+    case LN_STATUS_CLOSED:
+        p_str_stat = "closed";
+        break;
     default:
         p_str_stat = "???";
     }
@@ -55,8 +60,8 @@ class PtarmBase(LnNode):
     def get_status(self, peer):
         try:
             jcmd = '{"method":"getinfo","params":[]}'
-            response = self._socket_send(jcmd)
-            jrpc = json.loads(response.decode('utf-8'))
+            response = self.socket_send(jcmd)
+            jrpc = json.loads(response)
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
                 return LnNode.Status.NONE
             peer_status = ''
@@ -86,28 +91,28 @@ class PtarmBase(LnNode):
     def get_nodeid(self):
         try:
             jcmd = '{"method":"getinfo","params":[]}'
-            response = self._socket_send(jcmd)
-            jrpc = json.loads(response.decode('utf-8'))
+            response = self.socket_send(jcmd)
+            jrpc = json.loads(response)
             return jrpc['result']['node_id']
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            sys.exit()
+            os.kill(os.getpid(), signal.SIGKILL)
 
 
     # result[1] = "OK" or "NG"
     def connect(self, node_id, ipaddr, port):
         jcmd = '{"method":"connect","params":["' + node_id + '","' + ipaddr + '",' + str(port) + ']}'
         print(jcmd)
-        response = self._socket_send(jcmd)
-        jrpc = json.loads(response.decode('utf-8'))
+        response = self.socket_send(jcmd)
+        jrpc = json.loads(response)
         print('jrpc=', jrpc)
         if ('result' in jrpc) and (jrpc['result'] == 'OK'):
-            res = '{"result": ["connect","OK"]}'
+            res = '{"result": ["connect","OK","' + node_id + '"]}'
         elif ('error' in jrpc) and (jrpc['error']['code'] == -10002):
             #already connected
-            res = '{"result": ["connect","OK"]}'
+            res = '{"result": ["connect","OK","' + node_id + '"]}'
         else:
-            res = '{"result": ["connect","NG"]}'
+            res = '{"result": ["connect","NG","' + node_id + '"]}'
         return res
 
 
@@ -115,41 +120,66 @@ class PtarmBase(LnNode):
     def disconnect(self, node_id):
         jcmd = '{"method":"disconnect","params":["' + node_id + ',"0.0.0.0",0"]}'
         print(jcmd)
-        response = self._socket_send(jcmd)
-        jrpc = json.loads(response.decode('utf-8'))
+        response = self.socket_send(jcmd)
+        jrpc = json.loads(response)
         if ('result' in jrpc) and (jrpc['result'] == 'OK'):
-            res = '{"result": ["disconnect","OK"]}'
+            res = '{"result": ["disconnect","OK","' + node_id + '"]}'
         else:
-            res = '{"result": ["disconnect","NG"]}'
+            res = '{"result": ["disconnect","NG","' + node_id + '"]}'
         return res
 
 
     # result[1] = BOLT11 or "NG"
     def get_invoice(self, amount_msat):
-        res = self._socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
-        res = '{"result": ["invoice","' + json.loads(res.decode('utf-8'))['result']['bolt11'] + '"]}'
+        res = self.socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
+        if 'error' not in res:
+            res = '{"result": ["invoice","' + json.loads(res)['result']['bolt11'] + '"]}'
+        else:
+            res = '{"result": ["invoice","NG"]}'
         return res
 
 
     # result[1] = "OK" or "NG"
     def pay(self, invoice):
-        res = self._socket_send('{"method":"routepay","params":["' + invoice + '",0]}')
-        res = '{"result": ["pay","OK"]}'
+        res = self.socket_send('{"method":"routepay","params":["' + invoice + '",0]}')
+        if 'error' not in res:
+            res = '{"result": ["pay","OK"]}'
+        else:
+            res = '{"result": ["pay","NG"]}'
         return res
 
 
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
-        res = self._socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
-        res = '{"result": ["closechannel","OK"]}'
+        res = self.socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
+        if 'error' not in res:
+            res = '{"result": ["closechannel","OK","' + node_id + '"]}'
+        else:
+            res = '{"result": ["closechannel","NG","' + node_id + '"]}'
         return res
 
 
-    def _socket_send(self, req):
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((self.rpc_addr, self.rpc_port))
-        client.send(req.encode())
-        response = client.recv(4096)
-        time.sleep(1)
-        # client.close()
+    def socket_send(self, req):
+        response = ''
+        try:
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect((self.rpc_addr, self.rpc_port))
+            client.send(req.encode())
+            response = client.recv(4096).decode('utf-8')
+            time.sleep(1)
+            # client.close()
+        except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            os.kill(os.getpid(), signal.SIGKILL)
         return response
+
+
+    def linux_cmd_exec(self, cmd):
+        print('cmd:', cmd.split(' '))
+        ret = ''
+        try:
+            ret = subprocess.check_output(cmd.split(' ')).strip().decode('utf-8')
+        except subprocess.CalledProcessError as e:
+            print('!!! error happen(errcode=%d) !!!' % e.returncode)
+            ret = None
+        return ret

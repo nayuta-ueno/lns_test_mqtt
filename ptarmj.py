@@ -20,17 +20,17 @@ class PtarmJ(PtarmBase):
         txindex = 0
         cmd = '{"method":"fund","params":["' + node_id + '",' + ipaddr_dummy + ',' + txid + ',' + str(txindex) + ',' + str(amount) + ',0,0,0 ]}'
         print('cmd= ' + cmd)
-        response = self._socket_send(cmd)
-        print('result= ' + response.decode('utf-8'));
-        jrpc = json.loads(response.decode('utf-8'))
+        response = self.socket_send(cmd)
+        print('result= ' + response);
+        jrpc = json.loads(response)
         if ('result' in jrpc) and (jrpc['result']['status'] == 'Progressing'):
             while True:
                 st = self.get_status()
                 if st == LnNode.Status.FUNDING:
-                    res = '{"result": ["openchannel","OK"]}'
+                    res = '{"result": ["openchannel","OK","' + node_id + '"]}'
                     break
                 print('  funding start check: ' + str(st))
                 time.sleep(1)
         else:
-            res = '{"result": ["openchannel","NG"]}'
+            res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res

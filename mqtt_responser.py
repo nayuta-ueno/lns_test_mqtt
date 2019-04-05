@@ -58,10 +58,13 @@ def on_message(client, _, msg):
 
 def poll_status(client):
     while True:
+        status = []
         for peer in peer_node:
-            status = ln_node.get_status(peer)
-            #print(str(status))
-            client.publish('status/' + node_id, '{"status": "' + str(status) + '", "ipaddr": "' + ln_node.ipaddr + '", "port": ' + str(ln_node.port) + ', "peer": "' + peer + '"}')
+            stat = [str(ln_node.get_status(peer)), peer]
+            status.append(stat)
+            # print('status=', status)
+        res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port}
+        client.publish('status/' + node_id, json.dumps(res_dict))
         time.sleep(10)
 
 
@@ -93,13 +96,11 @@ def exec_notify(client, json_msg):
 
     if 'connect' in json_msg:
         for node in json_msg['connect']:
-            if node[0] == node_id:
-                if node[0] not in peer_node:
-                    peer_node.append(node[1])
-            elif node[1] == node_id:
-                if node[1] not in peer_node:
-                    peer_node.append(node[0])
-        #print('peer_node: ', peer_node)
+            if (node[0] == node_id) and (node[1] not in peer_node):
+                peer_node.append(node[1])
+            elif (node[1] == node_id) and (node[0] not in peer_node):
+                peer_node.append(node[0])
+        # print('peer_node: ', peer_node)
 
 
 def main():
