@@ -156,5 +156,5 @@ class PtarmBase(LnNode):
         client.send(req.encode())
         response = client.recv(4096)
         time.sleep(1)
-        client.close()
+        # client.close()
         return response

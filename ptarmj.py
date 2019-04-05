@@ -15,7 +15,11 @@ class PtarmJ(PtarmBase):
     def open_channel(self, node_id, amount):
         res = ''
         time.sleep(3)       #wait init exchange
-        cmd = '{"method":"fund","params":["' + node_id + '","0.0.0.0",0,"0000000000000000000000000000000000000000000000000000000000000000",0,' + str(amount) + ',0,0,0 ]}'
+        ipaddr = "0.0.0.0"
+        port = 0
+        txid = "0000000000000000000000000000000000000000000000000000000000000000"
+        txindex = 0
+        cmd = '{"method":"fund","params":["' + node_id + '","' + ipaddr + '",' + str(port) + ',"' + txid + '",' + str(txindex) + ',' + str(amount) + ',0,0,0 ]}'
         print('cmd= ' + cmd)
         response = self._socket_send(cmd)
         print('result= ' + response.decode('utf-8'));

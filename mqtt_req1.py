@@ -32,6 +32,7 @@ MQTT_PORT = 1883
 PAY_COUNT_MAX = 5
 
 # global variable
+TESTNAME = 'test1'      # publish my stoppage order
 NODE_NUM = 2
 FUNDER=0
 FUNDEE=1
@@ -94,8 +95,8 @@ def poll_time(client):
                 stop_order = True
                 break
     if stop_order:
-        print('!!! stop order')
-        _killme(client)
+        print('!!! stop order: poll_time')
+        _stop(client)
 
 
 # request check
@@ -123,6 +124,10 @@ def requester(client):
 #   check our testing node_ids
 def proc_topic(client, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
+
+    if msg.topic == 'stop/' + TESTNAME:
+        print('STOP!')
+        _killme()
 
     ret = False
     mine = False
@@ -160,14 +165,12 @@ def proc_payload(client, msg, recv_id):
             ret = message_response(client, json.loads(payload), msg, recv_id)
         elif msg.topic.startswith('status/'):
             message_status(client, json.loads(payload), msg, recv_id)
-        elif msg.topic == 'stop':
-            print('STOP!')
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
         print('payload=', payload)
     if not ret:
-        print('!!! False')
-        _killme(client)
+        print('!!! False: proc_payload')
+        _stop(client)
 
 
 # process for status
@@ -299,11 +302,15 @@ def message_status(client, json_msg, msg, recv_id):
         print('      json_msg=', json_msg, ' is_funding=', is_funding)
 
 
-def _killme(client):
-    os.kill(os.getpid(), signal.SIGKILL)
+def _stop(client):
     for node in node_id:
         print('stop: ' + node)
         client.publish('stop/' + node, 'stop all')
+    client.publish('stop/' + TESTNAME, 'stop all')
+
+
+def _killme():
+    os.kill(os.getpid(), signal.SIGKILL)
 
 
 # def linux_cmd_exec(cmd):
