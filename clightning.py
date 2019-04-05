@@ -61,8 +61,10 @@ class CLightning(LnNode):
             for p in result['peers']:
                 if p['id'] == peer:
                     for ch in p['channels']:
-                        peer_status = ch['state']
-                        break
+                        if ch['state'] != 'ONCHAIN':
+                            # onchainなものは「済」と判断して無視する
+                            peer_status = ch['state']
+                            break
             # print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
