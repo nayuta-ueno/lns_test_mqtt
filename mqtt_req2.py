@@ -355,7 +355,7 @@ def message_response(client, json_msg, msg, recv_id):
 
     elif json_msg['result'][0] == 'pay':
         if json_msg['result'][1] == 'OK':
-            log_print('pay start: ' + str(pay_count))
+            log_print('pay start: ' + str(pay_count) + '(' + str(last_fail_pay_count) + ')')
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
