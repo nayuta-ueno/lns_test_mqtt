@@ -8,7 +8,7 @@ node1---hop---node2
         [node1 => hop]open_channel
         [hop => node2]open_channel
         ...
-        for 10:
+        for 1000:
             [node2]invoice
             [node1]pay
         [hop => node1]close_channel
@@ -44,14 +44,25 @@ FUNDING_NONE = 0
 FUNDING_WAIT = 1
 FUNDING_NOW = 2
 
-# const variable
+
+# 使うノード数
 NODE_NUM = 3
+
+# node_id[]のインデックス
 NODE1=0
 HOP=1
 NODE2=2
+
+# ログ用のラベル
 NODE_LABEL = ['node1', 'hop', 'node2']
-PAY_COUNT_MAX = 10
+
+# [0]が[1]に向けてconnectする
+# close_all()も同じ方向でcloseする
 NODE_CONNECT = [ [NODE1, HOP], [NODE2, HOP] ]
+
+# 送金回数。この回数だけ送金後、mutual closeする。
+PAY_COUNT_MAX = 1000
+
 
 # global variable
 node_id = [''] * NODE_NUM
@@ -62,6 +73,7 @@ loop_reqester = True
 is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
 funding_wait_count = 0      # is_fundingが1になったままのカウント数
 pay_count = 0
+last_fail_pay_count = 0     # 前回payでNGが返ってきたときのpay_count
 funded_block_count = 0
 
 
@@ -168,8 +180,6 @@ def proc_topic(client, msg):
 
 # payload
 def proc_payload(client, msg, recv_id):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
-
     ret = True
     payload = ''
     try:
@@ -191,7 +201,7 @@ def proc_payload(client, msg, recv_id):
 
 # process for status
 def proc_status(client, msg, recv_id):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count, funded_block_count
+    global dict_status_node, thread_request, loop_reqester, is_funding, funded_block_count
 
     if len(dict_status_node) != NODE_NUM:
         return
@@ -201,9 +211,10 @@ def proc_status(client, msg, recv_id):
             all_normal = True
             all_none = True
             all_funding = True
+            print('proc_status-------------')
             for node in dict_status_node:
                 for status in dict_status_node[node]['status']:
-                    # print('status=' + status[0])
+                    print('proc_status=' + status[0] + ': ' + node2label(status[1]))
                     if status[0] != 'Status.NORMAL':
                         all_normal = False
                     if status[0] != 'Status.NONE':
@@ -211,13 +222,14 @@ def proc_status(client, msg, recv_id):
                     if status[0] != 'Status.FUNDING':
                         all_funding = False
             if all_normal:
-                print('start requester thread')
-                funded_block_count = getblockcount()    #announcement計測用
+                print('all_normal: start requester thread')
+                funded_block_count = getblockcount()    # announcement計測用
                 is_funding = FUNDING_NONE
                 loop_reqester = True
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
             elif all_none and is_funding == FUNDING_NONE:
+                print('all_none')
                 proc_connect_start(client)
             if all_funding:
                 is_funding = FUNDING_NOW
@@ -242,7 +254,7 @@ def proc_status(client, msg, recv_id):
 
 # request check
 def requester(client):
-    global loop_reqester, pay_count
+    global pay_count
 
     while loop_reqester:
         print('payed:' + str(pay_count))
@@ -307,7 +319,7 @@ def close_all(client):
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global connect_num, pay_count, is_funding
+    global pay_count, last_fail_pay_count, is_funding
 
     ret = True
     if json_msg['result'][0] == 'connect':
@@ -348,10 +360,15 @@ def message_response(client, json_msg, msg, recv_id):
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > 8:
-                log_print('pay fail: ' + json_msg['result'][1])
-                ret = False
+                if last_fail_pay_count == pay_count:
+                    log_print('pay fail: ' + json_msg['result'][1])
+                    ret = False
+                else:
+                    print('pay fail: last=' + str(last_fail_pay_count) + ' now=' + str(pay_count))
+                    last_fail_pay_count = pay_count
             else:
                 print('pay fail: through(' + str(blk - funded_block_count) + ')')
+                pay_count = 0
 
     if not ret:
         log_print('!!! False: message_response')
@@ -362,7 +379,7 @@ def message_response(client, json_msg, msg, recv_id):
 
 # message: topic="status/#"
 def message_status(client, json_msg, msg, recv_id):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
+    global dict_status_node
 
     dict_status_node[recv_id] = json_msg
     if json_msg['status'] != 'Status.NORMAL':

@@ -7,6 +7,7 @@ import sys
 import os
 import json
 import traceback
+import signal
 
 from lnnode import LnNode
 from lightning import LightningRpc
@@ -102,6 +103,7 @@ class CLightning(LnNode):
             print('connect=', res)
             res = '{"result": ["connect","OK","' + node_id + '"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail connect')
             res = '{"result": ["connect","NG","' + node_id + '"]}'
         return res
@@ -114,6 +116,7 @@ class CLightning(LnNode):
             print('disconnect=', res)
             res = '{"result": ["disconnect","OK","' + node_id + '"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail disconnect')
             res = '{"result": ["disconnect","NG","' + node_id + '"]}'
         return res
@@ -126,6 +129,7 @@ class CLightning(LnNode):
             print('open_channel=', res)
             res = '{"result": ["openchannel","OK","' + node_id + '"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail open_channel')
             res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
@@ -138,6 +142,7 @@ class CLightning(LnNode):
             print('invoice=', res)
             res = '{"result": ["invoice","' + res['bolt11'] + '"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail invoice')
             res = '{"result": ["invoice","NG"]}'
         return res
@@ -146,10 +151,11 @@ class CLightning(LnNode):
     # result[1] = "OK" or "NG"
     def pay(self, invoice):
         try:
-            res = self.lnrpc.pay(invoice)
+            res = self.lnrpc.pay(invoice, riskfactor=100)
             print('pay=', res)
             res = '{"result": ["pay","OK"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail pay')
             res = '{"result": ["pay","NG"]}'
         return res
@@ -162,6 +168,7 @@ class CLightning(LnNode):
             print('close=', res)
             res = '{"result": ["closechannel","OK","' + node_id + '"]}'
         except:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail closechannel')
             res = '{"result": ["closechannel","NG","' + node_id + '"]}'
         return res

@@ -7,6 +7,7 @@ import json
 import traceback
 import time
 import subprocess
+import signal
 
 from lnnode import LnNode
 
