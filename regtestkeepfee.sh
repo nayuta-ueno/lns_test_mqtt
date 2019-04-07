@@ -9,11 +9,38 @@ if [ ${CHAIN} != regtest ]; then
 	exit 1
 fi
 
+payment() {
+	LIST=`bitcoin-cli listunspent`
+	num=0
+	while :
+	do
+		AMOUNT=`echo ${LIST} | jq .[${num}].amount`
+		AMOUNT=$(printf "%.8f" ${AMOUNT})
+		#echo "  AMOUNT=${AMOUNT}"
+		# 100mBTC以上のamount
+		SUB=`echo "${AMOUNT} * 1000 / 10" | bc`
+		if [ ${SUB} -gt 0 ]; then
+			break
+		fi
+		num=$((num+1))
+	done
+	TXID=`echo ${LIST} | jq .[${num}].txid`
+	VOUT=`echo ${LIST} | jq .[${num}].vout`
+	AMOUNT=`echo ${AMOUNT} - 0.000002 | bc`
+	AMOUNT=$(printf "%.8f" ${AMOUNT})
+	ADDR=`bitcoin-cli getnewaddress`
+
+	TX=`bitcoin-cli createrawtransaction "[{\"txid\":${TXID},\"vout\":${VOUT}}]" "[{\"${ADDR}\":${AMOUNT}}]"`
+	TX=`bitcoin-cli signrawtransactionwithwallet ${TX}`
+	TX=`echo ${TX} | jq -r .hex`
+	TXID=`bitcoin-cli sendrawtransaction ${TX}`
+	echo PAY=${TXID}
+}
+
 cnt=0
 while :
 do
 	FEERATE=`bitcoin-cli estimatesmartfee 6 | jq .feerate`
-	#echo FEERATE=${FEERATE}
 	if [ ${FEERATE} != null ]; then
 		FEERATE=$(printf "%.8f" ${FEERATE})
 		SUB=`echo "${FEERATE} - 0.00005000" | bc`
@@ -21,6 +48,7 @@ do
 		if [ ${SUB:0:1} == '-' ]; then
 			echo FEERATE=${FEERATE}
 			sleep ${GENERATE_SEC}
+			payment
 			bitcoin-cli generate 1 > /dev/null
 			cnt=0
 			continue
@@ -32,17 +60,5 @@ do
 		cnt=0
 	fi
 
-	LIST=`bitcoin-cli listunspent`
-	TXID=`echo ${LIST} | jq .[0].txid`
-	VOUT=`echo ${LIST} | jq .[0].vout`
-	AMOUNT=`echo ${LIST} | jq .[0].amount`
-	AMOUNT=`echo ${AMOUNT} - 0.000002 | bc`
-	AMOUNT=$(printf "%.8f" ${AMOUNT})
-	ADDR=`bitcoin-cli getnewaddress`
-
-	TX=`bitcoin-cli createrawtransaction "[{\"txid\":${TXID},\"vout\":${VOUT}}]" "[{\"${ADDR}\":${AMOUNT}}]"`
-	TX=`bitcoin-cli signrawtransactionwithwallet ${TX}`
-	TX=`echo ${TX} | jq -r .hex`
-	TXID=`bitcoin-cli sendrawtransaction ${TX}`
-	#echo ${TXID}
+	payment
 done

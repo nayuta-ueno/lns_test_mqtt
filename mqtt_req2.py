@@ -73,8 +73,9 @@ loop_reqester = True
 is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
 funding_wait_count = 0      # is_fundingが1になったままのカウント数
 pay_count = 0
-last_fail_pay_count = 0     # 前回payでNGが返ってきたときのpay_count
+last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
 funded_block_count = 0
+fail_count = 0
 
 
 # MQTT: connect
@@ -319,7 +320,7 @@ def close_all(client):
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global pay_count, last_fail_pay_count, is_funding
+    global pay_count, fail_count, last_fail_pay_count, is_funding
 
     ret = True
     if json_msg['result'][0] == 'connect':
@@ -355,16 +356,17 @@ def message_response(client, json_msg, msg, recv_id):
 
     elif json_msg['result'][0] == 'pay':
         if json_msg['result'][1] == 'OK':
-            log_print('pay start: ' + str(pay_count) + '(' + str(last_fail_pay_count) + ')')
+            log_print('pay start: ' + str(pay_count) + '(' + str(last_fail_pay_count) + ')' + ', fail_count=' + str(fail_count))
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > 8:
+                fail_count += 1
                 if last_fail_pay_count == pay_count:
-                    log_print('pay fail: ' + json_msg['result'][1])
+                    log_print('pay fail: ' + json_msg['result'][1] + ', fail_count=' + str(fail_count))
                     ret = False
                 else:
-                    print('pay fail: last=' + str(last_fail_pay_count) + ' now=' + str(pay_count))
+                    print('pay fail: last=' + str(last_fail_pay_count) + ' now=' + str(pay_count) + ', fail_count=' + str(fail_count))
                     last_fail_pay_count = pay_count
             else:
                 print('pay fail: through(' + str(blk - funded_block_count) + ')')
