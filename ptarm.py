@@ -44,3 +44,11 @@ class Ptarm(PtarmBase):
         else:
             res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
+
+
+if __name__ == '__main__':
+    ipaddr = sys.argv[1]
+    port = int(sys.argv[2])
+    ln_node = Ptarm()
+    ln_node.setup(ipaddr, port)
+    print(ln_node.get_nodeid())

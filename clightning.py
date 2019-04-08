@@ -172,3 +172,9 @@ class CLightning(LnNode):
             print('fail closechannel')
             res = '{"result": ["closechannel","NG","' + node_id + '"]}'
         return res
+
+
+if __name__ == '__main__':
+    ln_node = CLightning()
+    ln_node.setup('', 0, sys.argv[1])
+    print(ln_node.get_nodeid())
