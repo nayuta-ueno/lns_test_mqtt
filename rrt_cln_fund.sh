@@ -2,5 +2,5 @@
 
 set -eu
 
-../lightning/cli/lightning-cli --rpc-file=/tmp/light$1 listfunds | jq -e .outputs
-
+PORT=$1
+../lightning/cli/lightning-cli --rpc-file=/tmp/light${PORT} listfunds | jq -e .outputs

@@ -85,9 +85,9 @@ NODE3 -+
 cd lns_mqtt_test
 cp rrt_cln_daemon.sh ../lightning/
 cd ../lightning
-./rrt_cln_daemon.sh 3&
-./rrt_cln_daemon.sh 4&
-./rrt_cln_daemon.sh 5&
+./rrt_cln_daemon.sh 3333&
+./rrt_cln_daemon.sh 4444&
+./rrt_cln_daemon.sh 5555&
 
 pushd ../ptarmigan/install
 ./new_nodedir.sh rt
@@ -96,18 +96,18 @@ cd rt
 popd
 
 cd lns_mqtt_test
-./rrt_cln_mqtt.sh 3&
-./rrt_cln_mqtt.sh 4&
-./rrt_cln_mqtt.sh 5&
-./rrt_pt.sh&
+./rrt_cln_mqtt.sh 3333&
+./rrt_cln_mqtt.sh 4444&
+./rrt_cln_mqtt.sh 5555&
+./rrt_pt.sh 9735&
 ```
 
 2. NODE1, NODE3に入金
 
 ```
 cd lns_mqtt_test
-./rrt_cln_pay.sh 3
-./rrt_cln_pay.sh 5
+./rrt_cln_pay.sh 3333
+./rrt_cln_pay.sh 5555
 ```
 
 3. regtestのgenerator起動
@@ -121,8 +121,8 @@ cd lns_mqtt_test
 
 ```
 cd lns_mqtt_test
-./rrt_cln_fund.sh 3
-./rrt_cln_fund.sh 5
+./rrt_cln_fund.sh 3333
+./rrt_cln_fund.sh 5555
 ```
 
 5. テスト開始
@@ -145,12 +145,11 @@ python3 mqtt_req3.py <NODE1> <NODE3> <HOP> <NODE2>
 ```
 # c-lightning port=3333
 cd lightning
-rm -rf rt3
-./lightningd/lightningd --network=regtest --lightning-dir=rt3 --addr=127.0.0.1:3333 --log-level=debug --rpc-file=/tmp/light3
+./rrt_cln_daemon.sh 3333
 
 # responser
 cd lns_test_mqtt
-python3 mqtt_responser.py clightning 127.0.0.1 3333 /tmp/light3
+./rrt_cln_mqtt.sh 3333
 (NODE1のnode_idが出力される)
 ```
 
@@ -159,12 +158,11 @@ python3 mqtt_responser.py clightning 127.0.0.1 3333 /tmp/light3
 ```
 # c-lightning port=4444
 cd lightning
-rm -rf rt4
-./lightningd/lightningd --network=regtest --lightning-dir=rt4 --addr=127.0.0.1:4444 --log-level=debug --rpc-file=/tmp/light4
+./rrt_cln_daemon.sh 4444
 
 # responser
 cd lns_test_mqtt
-python3 mqtt_responser.py clightning 127.0.0.1 4444 /tmp/light4
+./rrt_cln_mqtt.sh 4444
 (NODE2のnode_idが出力される)
 ```
 
@@ -178,25 +176,26 @@ rm -rf db logs
 
 # responser
 cd lns_test_mqtt
-python3 mqtt_responser.py ptarm 127.0.0.1 9735
+./rrt_pt.sh 9735
 (HOPのnode_idが出力される)
 ```
 
-4. NODE1に送金しておく
-
-```
-cd lightning
-bitcoin-cli sendtoaddress `./cli/lightning-cli  --rpc-file=/tmp/light3 newaddr | jq -r .address` 0.01
-bitcoin-cli generate 1
-./cli/lightning-cli  --rpc-file=/tmp/light3 listfunds
-(fundされたことを確認する。fundまではしばらく時間がかかるので注意。)
-```
-
-5. regtestの場合、定期的にgenerateするスクリプトを実行する
+4. regtestの場合、定期的にgenerateするスクリプトを実行する
 
 ```
 cd lns_test_mqtt
 ./regtestkeepfee.sh
+```
+
+5. NODE1に送金しておく
+
+```
+cd lns_mqtt_test
+./rrt_cln_pay.sh 3333
+
+# fundされたことを確認する。fundまではしばらく時間がかかるので注意。
+```
+./rrt_cln_fund.sh 3333
 ```
 
 6. requester起動

@@ -262,7 +262,7 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,0 ]}')
+            client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
             pay_count += 1
             time.sleep(10)      # 送金の完了にかかわらず要求する。実環境に合わせて時間を調整しよう。
         else:

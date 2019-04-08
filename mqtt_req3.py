@@ -440,7 +440,7 @@ def node2label(id):
         if node == id:
             return NODE_LABEL[num]
         num += 1
-    return '???'
+    return '???(' + id + ')'
 
 
 def json_node_connect():
