@@ -15,6 +15,52 @@
   - 定期的に自分の状態を返す
   - ノードの種類に依存するが、テストに依存しない
 
+## インストール
+
+### MQTT broker
+
+brokerになりたいマシンだけで良い
+
+```
+sudo apt install mosquitto
+```
+
+### requester, responser
+
+```
+sudo apt install python3-pip
+sudo pip3 install -U pip
+sudo pip3 install pylightning paho-mqtt
+```
+
+### ノード
+
+ビルドに必要なaptなどは省略
+
+```
+#c-lightning
+git clone https://github.com/ElementsProject/lightning.git
+cd lightning
+./configure
+make
+
+cd ..
+
+#ptarmigan
+git clone https://github.com/nayutaco/ptarmigan.git
+cd ptarmigan
+make full
+
+cd ..
+```
+
+### test
+
+```
+git clone https://github.com/nayuta-ueno/lns_test_mqtt.git
+cp lns_test_mqtt/rrt_cln*.sh ./lightning/
+```
+
 ## テスト内容
 
 ### mqtt_req3.py
@@ -168,19 +214,3 @@ python3 mqtt_req2.py <NODE1のnode_id> <HOPのnode_id> <NODE2のnode_id>
 4. normal operationになったら、ptarmiganがinvoiceを発行し、c-lightningが支払う
 5. 5回送金を行ったら、ptarmiganがcloseする
 6. closeが終わったら、1に戻る
-
-## インストール
-
-### MQTT broker(brokerになりたいマシンだけで良い)
-
-```
-sudo apt install mosquitto
-```
-
-### requester, responser
-
-```
-sudo apt install python3-pip
-sudo pip3 install -U pip
-sudo pip3 install pylightning paho-mqtt
-```
