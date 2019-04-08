@@ -17,6 +17,75 @@
 
 ## テスト内容
 
+### mqtt_req3.py
+
+```
+NODE1 -+-> HOP --> NODE2
+       |
+NODE3 -+
+```
+  * 説明文はregtestとして書いているが、IPアドレスなどを変更することでtestnetなどでも動くはず
+  * 都合上、`&`を付けてバックグラウンド起動させているが、個別にコンソールを立てた方がわかりやすいだろう
+    * コンソールは、1つのLNノードに対して2つ、テスト制御として1つ(このテストは4ノードなので、最低9コンソール)
+  * NODE1(port=3333), NODE2(port=4444), NODE3(port=5555): c-lightning
+  * HOP = ptarmigan(port=9735)
+  * payer=NODE1, NODE3、payee=NODE2を繰り返す
+
+0. bitcoindをregtestで起動
+
+1. ノード立ち上げ
+
+```
+cd lns_mqtt_test
+cp rrt_cln_daemon.sh ../lightning/
+cd ../lightning
+./rrt_cln_daemon.sh 3&
+./rrt_cln_daemon.sh 4&
+./rrt_cln_daemon.sh 5&
+
+pushd ../ptarmigan/install
+./new_nodedir.sh rt
+cd rt
+../ptarmd --network=regtest&
+popd
+
+cd lns_mqtt_test
+./rrt_cln_mqtt.sh 3&
+./rrt_cln_mqtt.sh 4&
+./rrt_cln_mqtt.sh 5&
+./rrt_pt.sh&
+```
+
+2. NODE1, NODE3に入金
+
+```
+cd lns_mqtt_test
+./rrt_cln_pay.sh 3
+./rrt_cln_pay.sh 5
+```
+
+3. regtestのgenerator起動
+
+```
+cd lns_mqtt_test
+./regtestkeepfee.sh&
+```
+
+4. 2の入金が反映されるのを待つ
+
+```
+cd lns_mqtt_test
+./rrt_cln_fund.sh 3
+./rrt_cln_fund.sh 5
+```
+
+5. テスト開始
+
+```
+cd lns_mqtt_test
+python3 mqtt_req3.py <NODE1> <NODE3> <HOP> <NODE2>
+```
+
 ### mqtt_req2.py
 
 `NODE1 --> HOP --> NODE2`
