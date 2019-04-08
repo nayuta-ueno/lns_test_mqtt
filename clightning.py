@@ -136,15 +136,15 @@ class CLightning(LnNode):
 
 
     # result[1] = BOLT11 or "NG"
-    def get_invoice(self, amount_msat):
+    def get_invoice(self, amount_msat, label=''):
         try:
             res = self.lnrpc.invoice(amount_msat, "lbl{}".format(random.random()), "testpayment")
             print('invoice=', res)
-            res = '{"result": ["invoice","' + res['bolt11'] + '"]}'
+            res = '{"result": ["invoice","' + res['bolt11'] + '","' + label + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail invoice')
-            res = '{"result": ["invoice","NG"]}'
+            res = '{"result": ["invoice","NG","' + label + '"]}'
         return res
 
 

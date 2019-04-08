@@ -45,7 +45,7 @@ class LnNode(metaclass=ABCMeta):
 
     # result[1] = BOLT11 or "NG"
     @abstractmethod
-    def get_invoice(self, amount_msat):
+    def get_invoice(self, amount_msat, label=''):
         pass
 
 

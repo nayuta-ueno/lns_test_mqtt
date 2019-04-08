@@ -73,7 +73,10 @@ def exec_request(client, json_msg):
     params = json_msg['params']
     res = ''
     if method == 'invoice':
-        res = ln_node.get_invoice(params[0])
+        if len(params) == 1:
+            res = ln_node.get_invoice(params[0])
+        else:
+            res = ln_node.get_invoice(params[0], params[1])
     elif method == 'pay':
         res = ln_node.pay(params[0])
     elif method == 'connect':

@@ -64,13 +64,14 @@ class PtarmBase(LnNode):
             response = self.socket_send(jcmd)
             jrpc = json.loads(response)
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
+                print('  status: none')
                 return LnNode.Status.NONE
             peer_status = ''
             for p in jrpc['result']['peers']:
                 if p['node_id'] == peer:
                     peer_status = p['status']
                     break
-            # print('(status=', peer_status + ')')
+            #print('(status=', peer_status + ') : ' + peer)
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'establishing':
@@ -131,10 +132,10 @@ class PtarmBase(LnNode):
 
 
     # result[1] = BOLT11 or "NG"
-    def get_invoice(self, amount_msat):
+    def get_invoice(self, amount_msat, label=''):
         res = self.socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
         if 'error' not in res:
-            res = '{"result": ["invoice","' + json.loads(res)['result']['bolt11'] + '"]}'
+            res = '{"result": ["invoice","' + json.loads(res)['result']['bolt11'] + '","' + label + '"]}'
         else:
             res = '{"result": ["invoice","NG"]}'
         return res
