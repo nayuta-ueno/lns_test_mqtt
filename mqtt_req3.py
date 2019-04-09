@@ -48,6 +48,8 @@ FUNDING_WAIT_MAX = 10   # funding_wait_countの上限
 FUNDING_NONE = 0
 FUNDING_WAIT = 1
 FUNDING_NOW = 2
+FUNDING_FUNDED = 3
+FUNDING_CLOSING = 4
 
 PAY_START_BLOCK = 8
 PAY_FAIL_BLOCK = 10
@@ -79,15 +81,17 @@ PAY_SEC = 10
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
+
 thread_request = None
 loop_reqester = True
+
 funded_block_count = 0      # 全チャネルがnormal operationになったときのblockcount
 is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
 funding_wait_count = 0      # is_fundingが1になったままのカウント数
+
 pay_count = 0
 last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
 fail_count = 0
-
 
 
 # MQTT: connect
@@ -110,7 +114,7 @@ def on_message(client, _, msg):
     #   'stop/ + node_id        : requester --> responser'
     ret, recv_id = proc_topic(client, msg)
     if not ret:
-        if len(recv_id) != 0:
+        if (len(recv_id) != 0) and msg.topic.startswith('notify/'):
             print('yet: ' + node2label(recv_id))
         return
 
@@ -136,14 +140,18 @@ def notifier(client):
 #   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
 def poll_time(client):
     global dict_recv_node, funding_wait_count
+    SAME_LIMIT_SECOND = 30 * 60
+    LOOP_SECOND = 30
 
+    bak_funding = FUNDING_NONE
+    same_status = 0
     stop_order = False
     while not stop_order:
-        time.sleep(30)
+        time.sleep(LOOP_SECOND)
 
         # check health
         if len(dict_recv_node) < NODE_NUM:
-            print('node not found')
+            print('not all node found')
             stop_order = True
             break
         for node in dict_recv_node:
@@ -158,6 +166,15 @@ def poll_time(client):
                 print('funding not started long time')
                 stop_order = True
                 break
+        if bak_funding == is_funding:
+            same_status += 1
+            if same_status > SAME_LIMIT_SECOND / LOOP_SECOND:
+                print('too many same status: ' + str(is_funding))
+                stop_order = True
+                break
+        else:
+            same_status = 0
+        bak_funding = is_funding
     if stop_order:
         print('!!! stop order: poll_time')
         publish_stop(client)
@@ -238,14 +255,17 @@ def proc_status(client, msg, recv_id):
                         all_funding = False
             if all_normal:
                 funded_block_count = getblockcount()    # announcement計測用
-                is_funding = FUNDING_NONE
+                is_funding = FUNDING_FUNDED
                 loop_reqester = True
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
                 print('all_normal: start requester thread: ' + str(funded_block_count))
             elif all_none and is_funding == FUNDING_NONE:
-                print('all_none')
+                print('all_none --> connect')
                 proc_connect_start(client)
+            elif all_none and is_funding == FUNDING_CLOSING:
+                print('all_none')
+                is_funding = FUNDING_NONE
             if all_funding:
                 print('all_funding')
                 is_funding = FUNDING_NOW
@@ -338,11 +358,14 @@ def proc_invoice_got(client, json_msg, msg, recv_id):
 #################################################################################
 
 def close_all(client):
+    global is_funding
+
     for conn in NODE_CONNECT:
         closer = node_id[conn[0]]
         closee = node_id[conn[1]]
         log_print('[REQ]close: ' + NODE_LABEL[conn[0]] + '=>' + NODE_LABEL[conn[1]])
         client.publish('request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
+    is_funding = FUNDING_CLOSING
 
 
 # message: topic="response/#"
