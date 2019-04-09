@@ -108,6 +108,9 @@ def on_connect(client, user_data, flags, response_code):
 def on_message(client, _, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
 
+    # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+    sys.stdout.flush()
+
     # topic
     #   'request/' + node_id    : requester --> responser
     #   'response/' + node_id   : responser ==> requester
