@@ -47,9 +47,8 @@ TESTNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in
 FUNDING_WAIT_MAX = 10   # funding_wait_countの上限
 FUNDING_NONE = 0
 FUNDING_WAIT = 1
-FUNDING_NOW = 2
-FUNDING_FUNDED = 3
-FUNDING_CLOSING = 4
+FUNDING_FUNDED = 2
+FUNDING_CLOSING = 3
 
 PAY_START_BLOCK = 8
 PAY_FAIL_BLOCK = 10
@@ -70,6 +69,8 @@ NODE_LABEL = ['node1', 'node3', 'hop', 'node2']
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [ [NODE1, HOP], [NODE2, HOP], [NODE3, HOP] ]
+NODE_OPEN = [ [NODE1, HOP], [HOP, NODE2], [NODE3, HOP] ]
+NODE_OPEN_AMOUNT = 50000
 
 # 送金回数。この回数だけ送金後、mutual closeする。
 PAY_COUNT_MAX = 100
@@ -81,6 +82,8 @@ PAY_SEC = 10
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
+
+array_connected_node = []
 
 thread_request = None
 loop_reqester = True
@@ -98,18 +101,16 @@ fail_count = 0
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     client.subscribe('#')
-    th = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
-    th = threading.Thread(target=notifier, args=(client,), name='notifier', daemon=True)
-    th.start()
+    th1 = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
+    th1.start()
+    th2 = threading.Thread(target=notifier, args=(client,), name='notifier', daemon=True)
+    th2.start()
     print('MQTT connected')
 
 
 # MQTT: message subscribed
 def on_message(client, _, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
-
-    # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
-    sys.stdout.flush()
 
     # topic
     #   'request/' + node_id    : requester --> responser
@@ -135,12 +136,17 @@ def notifier(client):
         for node in node_id:
             # print('notify: ' + node)
             client.publish('notify/' + node, json.dumps(conn_dict))
+
+        if is_funding == FUNDING_NONE:
+            print('connected list:', array_connected_node)
+            connect_all(client)
+
         time.sleep(5)
 
 
 # check status health
 #   起動して30秒以内にテスト対象のnode全部がstatusを送信すること
-#   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
+#   テスト対象のnodeは、120秒以内にstatusを毎回送信すること(通信が詰まっているときがあるのか、60秒で失敗することがあった))
 def poll_time(client):
     global dict_recv_node, funding_wait_count
     SAME_LIMIT_SECOND = 30 * 60 # 同じ状態が継続できる上限(FUNDING_FUNDED以外)
@@ -152,33 +158,38 @@ def poll_time(client):
     while not stop_order:
         time.sleep(LOOP_SECOND)
 
+        print('*** is_funding=' + str(is_funding))
+
         # check health
         if len(dict_recv_node) < NODE_NUM:
-            print('not all node found')
+            errlog_print('not all node found: ', dict_recv_node)
             stop_order = True
             break
         for node in dict_recv_node:
-            if time.time() - dict_recv_node[node] > 60:
-                print('node not exist:' + node)
+            if time.time() - dict_recv_node[node] > 120:
+                errlog_print('node not exist:' + node)
                 stop_order = True
                 break
         if is_funding == FUNDING_WAIT:
             funding_wait_count += 1
             print('funding_wait_count=' + str(funding_wait_count))
             if funding_wait_count > FUNDING_WAIT_MAX:
-                print('  --> funding not started long time')
+                errlog_print('  --> funding not started long time')
                 stop_order = True
                 break
         if (bak_funding == is_funding) and (is_funding != FUNDING_FUNDED):
             same_status += 1
             print('same status: ' + str(same_status))
             if same_status > SAME_LIMIT_SECOND / LOOP_SECOND:
-                print('  --> too many same status: ' + str(is_funding))
+                errlog_print('  --> too many same status: ' + str(is_funding))
                 stop_order = True
                 break
         else:
             same_status = 0
         bak_funding = is_funding
+
+        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+        sys.stdout.flush()
     if stop_order:
         print('!!! stop order: poll_time')
         publish_stop(client)
@@ -187,7 +198,7 @@ def poll_time(client):
 # topic
 #   check our testing node_ids
 def proc_topic(client, msg):
-    global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
+    global dict_recv_node
 
     if msg.topic == 'stop/' + TESTNAME:
         print('STOP!')
@@ -246,17 +257,14 @@ def proc_status(client, msg, recv_id):
         if thread_request is None:
             all_normal = True
             all_none = True
-            all_funding = True
-            print('proc_status-------------')
+            #print('    proc_status-------------')
             for node in dict_status_node:
                 for status in dict_status_node[node]['status']:
-                    print('proc_status=' + status[0] + ': ' + node2label(status[1]))
+                    #print('    proc_status=' + status[0] + ': ' + node2label(status[1]))
                     if status[0] != 'Status.NORMAL':
                         all_normal = False
                     if status[0] != 'Status.NONE':
                         all_none = False
-                    if status[0] != 'Status.FUNDING':
-                        all_funding = False
             if all_normal:
                 funded_block_count = getblockcount()    # announcement計測用
                 is_funding = FUNDING_FUNDED
@@ -264,15 +272,9 @@ def proc_status(client, msg, recv_id):
                 thread_request = threading.Thread(target=requester, args=(client,), name='requester', daemon=True)
                 thread_request.start()
                 print('all_normal: start requester thread: ' + str(funded_block_count))
-            elif all_none and is_funding == FUNDING_NONE:
-                print('all_none --> connect')
-                proc_connect_start(client)
             elif all_none and is_funding == FUNDING_CLOSING:
-                print('all_none')
+                print('all_none: close done')
                 is_funding = FUNDING_NONE
-            if all_funding:
-                print('all_funding')
-                is_funding = FUNDING_NOW
         else:
             all_normal = True
             for node in dict_status_node:
@@ -319,36 +321,6 @@ def requester(client):
     print('exit requester')
 
 
-def proc_connect_start(client):
-    global is_funding
-
-    is_funding = FUNDING_WAIT
-
-    for conn in NODE_CONNECT:
-        connector = node_id[conn[0]]
-        connectee = node_id[conn[1]]
-        log_print('[REQ]connect: ' + NODE_LABEL[conn[0]] + '=>' + NODE_LABEL[conn[1]])
-        ipaddr = dict_status_node[connectee]['ipaddr']
-        port = dict_status_node[connectee]['port']
-        client.publish('request/' + connector, \
-            '{"method":"connect", "params":['
-                '"' + connectee + '", '
-                '"' + ipaddr + '", ' + str(port) + ' ]}')
-
-
-def proc_connected(client, json_msg, msg, recv_id):
-    log_print('[RESPONSE]connect-->[REQ]open ' + node2label(recv_id) + '..' + node2label(json_msg['result'][2]))
-    if recv_id == node_id[NODE1]:
-        client.publish('request/' + node_id[NODE1],
-                '{"method":"openchannel","params":[ "' + node_id[HOP] + '", 50000 ]}')
-    elif recv_id == node_id[NODE2]:
-        client.publish('request/' + node_id[HOP],
-                '{"method":"openchannel","params":[ "' + node_id[NODE2] + '", 50000 ]}')
-    elif recv_id == node_id[NODE3]:
-        client.publish('request/' + node_id[NODE3],
-                '{"method":"openchannel","params":[ "' + node_id[HOP] + '", 50000 ]}')
-
-
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2])
     if json_msg['result'][2] == 'node1':
@@ -361,29 +333,67 @@ def proc_invoice_got(client, json_msg, msg, recv_id):
 
 #################################################################################
 
-def close_all(client):
+def connect_all(client):
+    global is_funding, array_connected_node
+
+    if len(dict_status_node) != NODE_NUM:
+        return
+
+    for node in NODE_CONNECT:
+        connector = node_id[node[0]]
+        connectee = node_id[node[1]]
+        pair = (connector, connectee)
+        if pair not in array_connected_node:
+            log_print('[REQ]connect: ' + NODE_LABEL[node[0]] + '=>' + NODE_LABEL[node[1]])
+            ipaddr = dict_status_node[connectee]['ipaddr']
+            port = dict_status_node[connectee]['port']
+            client.publish('request/' + connector, \
+                '{"method":"connect", "params":['
+                    '"' + connectee + '", '
+                    '"' + ipaddr + '", ' + str(port) + ' ]}')
+
+
+def open_all(client):
     global is_funding
 
-    for conn in NODE_CONNECT:
-        closer = node_id[conn[0]]
-        closee = node_id[conn[1]]
-        log_print('[REQ]close: ' + NODE_LABEL[conn[0]] + '=>' + NODE_LABEL[conn[1]])
+    log_print('open_all')
+    for node in NODE_OPEN:
+        opener = node_id[node[0]]
+        openee = node_id[node[1]]
+        print('[REQ]open: ' + NODE_LABEL[node[0]] + ' => ' + NODE_LABEL[node[1]])
+        client.publish('request/' + opener,
+                '{"method":"openchannel","params":[ "' + openee + '", ' + str(NODE_OPEN_AMOUNT) + ' ]}')
+    is_funding = FUNDING_WAIT
+
+
+def close_all(client):
+    global is_funding, array_connected_node
+
+    log_print('close_all')
+    for node in NODE_CONNECT:
+        closer = node_id[node[0]]
+        closee = node_id[node[1]]
+        print('[REQ]close: ' + NODE_LABEL[node[0]] + '=>' + NODE_LABEL[node[1]])
         client.publish('request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
     is_funding = FUNDING_CLOSING
+    array_connected_node = []
 
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global pay_count, fail_count, last_fail_pay_count, is_funding
+    global dict_connected_node, is_funding, pay_count, funded_block_count, last_fail_pay_count, fail_count
 
     ret = True
     if json_msg['result'][0] == 'connect':
         if json_msg['result'][1] == 'OK':
-            log_print('connected: ' + node2label(json_msg['result'][2]))
-            proc_connected(client, json_msg, msg, recv_id)
+            log_print('connected: ' + node2label(recv_id) + ' => ' + node2label(json_msg['result'][2]))
+            pair = (recv_id, json_msg['result'][2])
+            if pair not in array_connected_node:
+                array_connected_node.append(pair)
+                if (len(array_connected_node) == len(NODE_CONNECT)) and (is_funding != FUNDING_WAIT):
+                    open_all(client)
         else:
-            log_print('fail connect: ' + node2label(json_msg['result'][2]))
-            is_funding = FUNDING_NONE
+            log_print('fail connect[' + json_msg['result'][1] + ']: ' + node2label(recv_id) + ' => ' + node2label(json_msg['result'][2]))
             # ret = False   # close直後はありがちなので、スルー
             time.sleep(5)
 
@@ -391,14 +401,14 @@ def message_response(client, json_msg, msg, recv_id):
         if json_msg['result'][1] == 'OK':
             log_print('funding start: ' + node2label(json_msg['result'][2]))
         else:
-            log_print('funding fail: ' + node2label(json_msg['result'][2]))
+            log_print('funding fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2]))
             ret = False
 
     elif json_msg['result'][0] == 'closechannel':
         if json_msg['result'][1] == 'OK':
             log_print('closing start: ' + node2label(json_msg['result'][2]))
         else:
-            log_print('closing fail: ' + node2label(json_msg['result'][2]))
+            log_print('closing fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2]))
             ret = False
 
     elif json_msg['result'][0] == 'invoice':
@@ -440,8 +450,6 @@ def message_status(client, json_msg, msg, recv_id):
     dict_status_node[recv_id] = json_msg
     if json_msg['status'] != 'Status.NORMAL':
         pass
-        #print('STATUS[' + msg.topic + ']' + json_msg['status'])
-        #print('      json_msg=', json_msg, ' is_funding=', is_funding)
 
 
 def publish_stop(client):
@@ -449,6 +457,7 @@ def publish_stop(client):
         print('stop: ' + node)
         client.publish('stop/' + node, 'stop all')
     client.publish('stop/' + TESTNAME, 'stop all')
+    log_print('send stop')
 
 
 def kill_me():
@@ -459,6 +468,12 @@ def log_print(msg):
     print('#####################')
     print('# ' + msg)
     print('#####################')
+
+
+def errlog_print(msg):
+    print('!!!!!!!!!!!!!!!!!!!!!')
+    print('! ' + msg)
+    print('!!!!!!!!!!!!!!!!!!!!!')
 
 
 def node2label(id):

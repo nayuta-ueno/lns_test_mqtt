@@ -71,9 +71,7 @@ do
 	cnt=0
 	for i in ${CLN[@]}; do
 		fund=`./rrt_cln_fund.sh ${i}`
-		echo fund=${fund}
 		fund=`echo ${fund} | jq -e '. | length'`
-		echo fundlen=${fund}
 		if [ ${fund} -ne 0 ]; then
 			cnt=$((cnt+1))
 		fi
@@ -84,11 +82,20 @@ do
 	sleep 10
 done
 
+echo !!!!!!!!!!!!!!!!!!
+echo !!! TEST START !!!
+echo !!!!!!!!!!!!!!!!!!
 
 NODEID1=`python3 clightning.py /tmp/light${NODE1}`
 NODEID2=`python3 clightning.py /tmp/light${NODE2}`
 NODEID3=`python3 clightning.py /tmp/light${NODE3}`
 HOPID=`python3 ptarm.py ${ADDR} ${HOP}`
 
-nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/req3.log&
-echo "kill -9 $!" >> ${KILLSH}
+echo NODE1=${NODEID1}
+echo NODE2=${NODEID2}
+echo NODE3=${NODEID3}
+echo HOP=${HOPID}
+
+#nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/req3.log&
+python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2}
+#echo "kill -9 $!" >> ${KILLSH}
