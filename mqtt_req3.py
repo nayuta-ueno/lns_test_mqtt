@@ -143,8 +143,8 @@ def notifier(client):
 #   テスト対象のnodeは、60秒以内にstatusを毎回送信すること
 def poll_time(client):
     global dict_recv_node, funding_wait_count
-    SAME_LIMIT_SECOND = 30 * 60
-    LOOP_SECOND = 30
+    SAME_LIMIT_SECOND = 30 * 60 # 同じ状態が継続できる上限(FUNDING_FUNDED以外)
+    LOOP_SECOND = 30            # 監視周期
 
     bak_funding = FUNDING_NONE
     same_status = 0
@@ -166,13 +166,14 @@ def poll_time(client):
             funding_wait_count += 1
             print('funding_wait_count=' + str(funding_wait_count))
             if funding_wait_count > FUNDING_WAIT_MAX:
-                print('funding not started long time')
+                print('  --> funding not started long time')
                 stop_order = True
                 break
-        if bak_funding == is_funding:
+        if (bak_funding == is_funding) and (is_funding != FUNDING_FUNDED):
             same_status += 1
+            print('same status: ' + str(same_status))
             if same_status > SAME_LIMIT_SECOND / LOOP_SECOND:
-                print('too many same status: ' + str(is_funding))
+                print('  --> too many same status: ' + str(is_funding))
                 stop_order = True
                 break
         else:
