@@ -58,9 +58,6 @@ def on_message(client, _, msg):
 
 def poll_status(client):
     while True:
-        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
-        sys.stdout.flush()
-
         status = []
         for peer in peer_node:
             stat = [str(ln_node.get_status(peer)), peer]
@@ -68,6 +65,10 @@ def poll_status(client):
             # print('status=', status)
         res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port}
         client.publish('status/' + node_id, json.dumps(res_dict))
+
+        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+        sys.stdout.flush()
+
         time.sleep(10)
 
 
