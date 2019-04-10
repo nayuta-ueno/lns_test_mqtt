@@ -1,12 +1,17 @@
 #!/bin/bash
 
-KILLSH=kill_req3.sh
-LOGDIR=`pwd`/logs
+SUFFIX=
+PORTBASE=1110
+START_GENERATOR=0
+
+KILLSH=kill_req3${SUFFIX}.sh
+LOGDIR=`pwd`/logs3${SUFFIX}
 ADDR=127.0.0.1
-NODE1=1110
-NODE2=1120
-NODE3=1130
-HOP=1140
+
+NODE1=$((PORTBASE))
+NODE2=$((PORTBASE+10))
+NODE3=$((PORTBASE+20))
+HOP=$((PORTBASE+30))
 
 CLN=(${NODE1} ${NODE2} ${NODE3})
 PTARM=(${HOP})
@@ -41,11 +46,11 @@ sleep 5
 # responser
 cd lns_test_mqtt
 for i in ${CLN[@]}; do
-	nohup python3 mqtt_responser.py clightning ${ADDR} ${i} /tmp/light${i} > ${LOGDIR}/cln_mqtt${i}.log&
+	nohup python3 mqtt_responser.py clightning ${ADDR} ${i} /tmp/light${i} > ${LOGDIR}/mqtt_cln${i}.log&
 	PID+=($!)
 done
 for i in ${PTARM[@]}; do
-	nohup python3 mqtt_responser.py ptarm ${ADDR} ${i} > ${LOGDIR}/ptarm_mqtt${i}.log&
+	nohup python3 mqtt_responser.py ptarm ${ADDR} ${i} > ${LOGDIR}/mqtt_ptarm${i}.log&
 	PID+=($!)
 done
 
@@ -55,8 +60,10 @@ for i in ${CLN[@]}; do
 done
 
 # generator
-nohup ./regtestkeepfee.sh > /dev/null&
-PID+=($!)
+if [ "${START_GENERATOR}" -eq 1 ]; then
+	nohup ./regtestkeepfee.sh > /dev/null&
+	PID+=($!)
+fi
 
 # create killall script
 touch ${KILLSH}
@@ -96,6 +103,6 @@ echo NODE2=${NODEID2}
 echo NODE3=${NODEID3}
 echo HOP=${HOPID}
 
-#nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/req3.log&
-python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2}
-#echo "kill -9 $!" >> ${KILLSH}
+nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
+echo "kill -9 $!" >> ${KILLSH}
+echo "rm ${KILLSH}" >> ${KILLSH}
