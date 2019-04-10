@@ -141,6 +141,9 @@ def notifier(client):
             print('connected list:', array_connected_node)
             connect_all(client)
 
+        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+        sys.stdout.flush()
+
         time.sleep(5)
 
 
@@ -155,44 +158,44 @@ def poll_time(client):
     bak_funding = FUNDING_NONE
     same_status = 0
     stop_order = False
+    reason = ''
     while not stop_order:
         time.sleep(LOOP_SECOND)
 
         print('*** is_funding=' + str(is_funding))
+        reason = 'found: ' + str(dict_recv_node)
+        print(reason)
 
         # check health
         if len(dict_recv_node) < NODE_NUM:
-            errlog_print('not all node found: ', dict_recv_node)
+            reason = 'not all node found: ', str(dict_recv_node)
             stop_order = True
             break
         for node in dict_recv_node:
             if time.time() - dict_recv_node[node] > 120:
-                errlog_print('node not exist:' + node)
+                reason = 'node not exist:' + node
                 stop_order = True
                 break
         if is_funding == FUNDING_WAIT:
             funding_wait_count += 1
             print('funding_wait_count=' + str(funding_wait_count))
             if funding_wait_count > FUNDING_WAIT_MAX:
-                errlog_print('  --> funding not started long time')
+                reason = 'funding not started long time'
                 stop_order = True
                 break
         if (bak_funding == is_funding) and (is_funding != FUNDING_FUNDED):
             same_status += 1
             print('same status: ' + str(same_status))
             if same_status > SAME_LIMIT_SECOND / LOOP_SECOND:
-                errlog_print('  --> too many same status: ' + str(is_funding))
+                reason = 'too many same status: ' + str(is_funding)
                 stop_order = True
                 break
         else:
             same_status = 0
         bak_funding = is_funding
-
-        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
-        sys.stdout.flush()
     if stop_order:
-        print('!!! stop order: poll_time')
-        publish_stop(client)
+        errlog_print(reason)
+        stop_all(client, reason)
 
 
 # topic
@@ -227,7 +230,6 @@ def proc_topic(client, msg):
 
 # payload
 def proc_payload(client, msg, recv_id):
-    ret = True
     payload = ''
     try:
         #payload
@@ -235,15 +237,12 @@ def proc_payload(client, msg, recv_id):
         if len(payload) == 0:
             return
         if msg.topic.startswith('response/'):
-            ret = message_response(client, json.loads(payload), msg, recv_id)
+            message_response(client, json.loads(payload), msg, recv_id)
         elif msg.topic.startswith('status/'):
             message_status(client, json.loads(payload), msg, recv_id)
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
         print('payload=', payload)
-    if not ret:
-        print('!!! False: proc_payload')
-        publish_stop(client)
 
 
 # process for status
@@ -379,11 +378,20 @@ def close_all(client):
     array_connected_node = []
 
 
+def stop_all(client, reason):
+    for node in node_id:
+        print('stop: ' + node)
+        client.publish('stop/' + node, reason)
+    client.publish('stop/' + TESTNAME, reason)
+    log_print('send stop: ' + reason)
+
+
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
     global dict_connected_node, is_funding, pay_count, funded_block_count, last_fail_pay_count, fail_count
 
     ret = True
+    reason = ''
     if json_msg['result'][0] == 'connect':
         if json_msg['result'][1] == 'OK':
             log_print('connected: ' + node2label(recv_id) + ' => ' + node2label(json_msg['result'][2]))
@@ -401,19 +409,19 @@ def message_response(client, json_msg, msg, recv_id):
         if json_msg['result'][1] == 'OK':
             log_print('funding start: ' + node2label(json_msg['result'][2]))
         else:
-            log_print('funding fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2]))
+            reason = 'funding fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2])
             ret = False
 
     elif json_msg['result'][0] == 'closechannel':
         if json_msg['result'][1] == 'OK':
             log_print('closing start: ' + node2label(json_msg['result'][2]))
         else:
-            log_print('closing fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2]))
+            reason = 'closing fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2])
             ret = False
 
     elif json_msg['result'][0] == 'invoice':
         if json_msg['result'][1] == 'NG':
-            log_print('fail invoice')
+            reason = 'fail invoice'
             ret = False
         else:
             proc_invoice_got(client, json_msg, msg, recv_id)
@@ -427,7 +435,7 @@ def message_response(client, json_msg, msg, recv_id):
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 fail_count += 1
                 if last_fail_pay_count == pay_count:
-                    log_print('pay fail: ' + json_msg['result'][1] + ', fail_count=' + str(fail_count))
+                    reason = 'pay fail: ' + json_msg['result'][1] + ', fail_count=' + str(fail_count)
                     ret = False
                 else:
                     print('pay fail: last=' + str(last_fail_pay_count) + ' now=' + str(pay_count) + ', fail_count=' + str(fail_count))
@@ -437,10 +445,8 @@ def message_response(client, json_msg, msg, recv_id):
                 pay_count = 0
 
     if not ret:
-        log_print('!!! False: message_response')
-        publish_stop(client)
-
-    return ret
+        log_print(reason)
+        stop_all(client, reason)
 
 
 # message: topic="status/#"
@@ -450,14 +456,6 @@ def message_status(client, json_msg, msg, recv_id):
     dict_status_node[recv_id] = json_msg
     if json_msg['status'] != 'Status.NORMAL':
         pass
-
-
-def publish_stop(client):
-    for node in node_id:
-        print('stop: ' + node)
-        client.publish('stop/' + node, 'stop all')
-    client.publish('stop/' + TESTNAME, 'stop all')
-    log_print('send stop')
 
 
 def kill_me():
