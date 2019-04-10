@@ -59,21 +59,25 @@ class PtarmBase(LnNode):
     }
     '''
     def get_status(self, peer):
+        local_msat = 0
         try:
             jcmd = '{"method":"getinfo","params":[]}'
             response = self.socket_send(jcmd)
             jrpc = json.loads(response)
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
                 print('  status: none')
-                return LnNode.Status.NONE
+                return LnNode.Status.NONE, 0
             peer_status = ''
+            current_ch = None
             for p in jrpc['result']['peers']:
                 if p['node_id'] == peer:
+                    current_ch = p
                     peer_status = p['status']
                     break
             print('(status=', peer_status + ') : ' + peer)
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
+                local_msat = current_ch['local']['msatoshi']
             elif peer_status == 'establishing':
                 status = LnNode.Status.FUNDING
             elif peer_status == 'close waiting' or\
@@ -87,7 +91,7 @@ class PtarmBase(LnNode):
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             status = LnNode.Status.UNKNOWN
-        return status
+        return status, local_msat
 
 
     def get_nodeid(self):
@@ -148,6 +152,29 @@ class PtarmBase(LnNode):
             res = '{"result": ["pay","OK"]}'
         else:
             res = '{"result": ["pay","NG"]}'
+        return res
+
+    # result[1] = "OK" or "NG"
+    def open_channel(self, node_id, amount):
+        res = ''
+        time.sleep(3)       #wait init exchange
+
+        cmd = self.get_open_command(node_id, amount)
+        print('cmd=' + cmd)
+        response = self.socket_send(cmd)
+        print('result= ' + response)
+        jrpc = json.loads(response)
+        if ('result' in jrpc) and (jrpc['result']['status'] == 'Progressing'):
+            while True:
+                st = self.get_status(node_id)[0]
+                if st == LnNode.Status.FUNDING:
+                    print('  status:funding')
+                    res = '{"result": ["openchannel","OK","' + node_id + '"]}'
+                    break
+                print('  funding start check: ' + str(st))
+                time.sleep(1)
+        else:
+            res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
 
 

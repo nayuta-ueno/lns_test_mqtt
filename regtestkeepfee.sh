@@ -1,6 +1,6 @@
 #!/bin/bash
 
-GENERATE_SEC=20
+GENERATE_SEC=15
 
 CHAIN=`bitcoin-cli getblockchaininfo | jq -r .chain`
 echo ${CHAIN}

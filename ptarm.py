@@ -11,11 +11,7 @@ from ptarm_base import PtarmBase
 
 
 class Ptarm(PtarmBase):
-    # result[1] = "OK" or "NG"
-    def open_channel(self, node_id, amount):
-        res = ''
-        time.sleep(3)       #wait init exchange
-
+    def get_open_command(self, node_id, amount):
         fconf = self.linux_cmd_exec('./ptarm_fundin.sh ' + str(100000 + amount) + ' ' + str(amount) + ' 0')
         if fconf is None:
             print('fail: pay_fundin.sh')
@@ -28,22 +24,7 @@ class Ptarm(PtarmBase):
         txindex = 0
         # peer_node_id, peer_addr, peer_port, txid, txindex, funding_sat, push_sat, feerate_per_kw, is_private
         cmd = '{"method":"fund","params":["' + node_id + '",' + ipaddr_dummy + ',' + fconf + ',0 ]}'
-        print('cmd= ' + cmd)
-        response = self.socket_send(cmd)
-        print('result= ' + response);
-        jrpc = json.loads(response)
-        if ('result' in jrpc) and (jrpc['result']['status'] == 'Progressing'):
-            while True:
-                st = self.get_status(node_id)
-                if st == LnNode.Status.FUNDING:
-                    print('  status:funding')
-                    res = '{"result": ["openchannel","OK","' + node_id + '"]}'
-                    break
-                print('  funding start check: ' + str(st))
-                time.sleep(1)
-        else:
-            res = '{"result": ["openchannel","NG","' + node_id + '"]}'
-        return res
+        return cmd
 
 
 if __name__ == '__main__':

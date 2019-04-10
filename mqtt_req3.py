@@ -448,6 +448,8 @@ def message_status(client, json_msg, msg, recv_id):
 
 
 def kill_me():
+    # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+    sys.stdout.flush()
     os.kill(os.getpid(), signal.SIGKILL)
 
 

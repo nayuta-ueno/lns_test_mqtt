@@ -55,22 +55,26 @@ class CLightning(LnNode):
     };
     '''
     def get_status(self, peer):
+        channel_sat = 0
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
                 print('(status=none)')
-                return LnNode.Status.NONE
+                return LnNode.Status.NONE, 0
             peer_status = ''
+            current_ch = None
             for p in result['peers']:
                 if p['id'] == peer:
                     for ch in p['channels']:
                         if ch['state'] != 'ONCHAIN':
                             # onchainなものは「済」と判断して無視する
+                            current_ch = ch
                             peer_status = ch['state']
                             break
             print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
+                channel_sat = current_ch['msatoshi_to_us']
             elif peer_status == 'CHANNELD_AWAITING_LOCKIN':
                 status = LnNode.Status.FUNDING
             elif peer_status == 'CHANNELD_SHUTTING_DOWN' or\
@@ -84,7 +88,7 @@ class CLightning(LnNode):
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             os.kill(os.getpid(), signal.SIGKILL)
-        return status
+        return status, channel_sat
 
 
     def get_nodeid(self):

@@ -60,7 +60,6 @@ cd lns_mqtt_test
 ./rrt_cln_pay.sh 3333
 
 # fundされたことを確認する。fundまではしばらく時間がかかるので注意。
-```
 ./rrt_cln_fund.sh 3333
 ```
 

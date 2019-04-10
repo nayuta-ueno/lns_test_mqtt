@@ -25,6 +25,8 @@ peer_node = []
 
 
 def _killme():
+    # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+    sys.stdout.flush()
     os.kill(os.getpid(), signal.SIGKILL)
 
 
@@ -60,7 +62,8 @@ def poll_status(client):
     while True:
         status = []
         for peer in peer_node:
-            stat = [str(ln_node.get_status(peer)), peer]
+            st, local_msat = ln_node.get_status(peer)
+            stat = [str(st), peer, local_msat]
             status.append(stat)
             # print('status=', status)
         res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port}
@@ -86,10 +89,10 @@ def exec_request(client, json_msg):
     elif method == 'connect':
         res = ln_node.connect(params[0], params[1], params[2])
     elif method == 'openchannel':
-        if ln_node.get_status(params[0]) == LnNode.Status.NONE:
+        if ln_node.get_status(params[0])[0] == LnNode.Status.NONE:
             res = ln_node.open_channel(params[0], params[1])
     elif method == 'closechannel':
-        if ln_node.get_status(params[0]) == LnNode.Status.NORMAL:
+        if ln_node.get_status(params[0])[0] == LnNode.Status.NORMAL:
             res = ln_node.close_mutual(params[0])
     else:
         print('method=', method)
