@@ -163,8 +163,6 @@ def poll_time(client):
         time.sleep(LOOP_SECOND)
 
         print('*** is_funding=' + str(is_funding))
-        reason = 'found: ' + str(dict_recv_node)
-        print(reason)
 
         # check health
         if len(dict_recv_node) < NODE_NUM:
@@ -388,7 +386,7 @@ def stop_all(client, reason):
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global dict_connected_node, is_funding, pay_count, funded_block_count, last_fail_pay_count, fail_count
+    global is_funding, pay_count, funded_block_count, last_fail_pay_count, fail_count, array_connected_node
 
     ret = True
     reason = ''

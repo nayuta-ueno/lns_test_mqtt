@@ -64,14 +64,14 @@ class PtarmBase(LnNode):
             response = self.socket_send(jcmd)
             jrpc = json.loads(response)
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
-                #print('  status: none')
+                print('  status: none')
                 return LnNode.Status.NONE
             peer_status = ''
             for p in jrpc['result']['peers']:
                 if p['node_id'] == peer:
                     peer_status = p['status']
                     break
-            #print('(status=', peer_status + ') : ' + peer)
+            print('(status=', peer_status + ') : ' + peer)
             if peer_status == 'normal operation':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'establishing':

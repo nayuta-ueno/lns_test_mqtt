@@ -58,6 +58,7 @@ class CLightning(LnNode):
         try:
             result = self.lnrpc.listpeers()
             if ('peers' not in result) or (len(result['peers']) == 0):
+                print('(status=none)')
                 return LnNode.Status.NONE
             peer_status = ''
             for p in result['peers']:
@@ -67,7 +68,7 @@ class CLightning(LnNode):
                             # onchainなものは「済」と判断して無視する
                             peer_status = ch['state']
                             break
-            # print('(status=', peer_status + ')')
+            print('(status=', peer_status + ')')
             if peer_status == 'CHANNELD_NORMAL':
                 status = LnNode.Status.NORMAL
             elif peer_status == 'CHANNELD_AWAITING_LOCKIN':

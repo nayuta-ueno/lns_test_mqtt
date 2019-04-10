@@ -1,6 +1,9 @@
 /.idea/
 __pycache__/
-nohup.out
-logs/
-kill*.sh
+log*/
 
+nohup.out
+kill*.sh
+*.json
+*.conf
+*.log
