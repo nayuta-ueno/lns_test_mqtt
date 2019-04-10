@@ -2,7 +2,7 @@
 '''
 node1-+-hop---node2
       |
-node2-+
+node3-+
 
     while True:
         [node1 => hop]connect
@@ -12,7 +12,7 @@ node2-+
         [node3 => hop]open_channel
         [hop => node2]open_channel
         ...
-        for 1000:
+        for PAY_COUNT_MAX:
             [node2]invoice
             [node1]pay
             [node2]invoice
@@ -44,7 +44,6 @@ MQTT_PORT = 1883
 TESTNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
 
 # const variable
-FUNDING_WAIT_MAX = 10   # funding_wait_countの上限
 FUNDING_NONE = 0
 FUNDING_WAIT = 1
 FUNDING_FUNDED = 2
@@ -90,7 +89,6 @@ loop_reqester = True
 
 funded_block_count = 0      # 全チャネルがnormal operationになったときのblockcount
 is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
-funding_wait_count = 0      # is_fundingが1になったままのカウント数
 
 pay_count = 0
 last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
@@ -151,7 +149,7 @@ def notifier(client):
 #   起動して30秒以内にテスト対象のnode全部がstatusを送信すること
 #   テスト対象のnodeは、120秒以内にstatusを毎回送信すること(通信が詰まっているときがあるのか、60秒で失敗することがあった))
 def poll_time(client):
-    global dict_recv_node, funding_wait_count
+    global dict_recv_node
     SAME_LIMIT_SECOND = 30 * 60 # 同じ状態が継続できる上限(FUNDING_FUNDED以外)
     LOOP_SECOND = 30            # 監視周期
 
@@ -172,13 +170,6 @@ def poll_time(client):
         for node in dict_recv_node:
             if time.time() - dict_recv_node[node] > 120:
                 reason = 'node not exist:' + node
-                stop_order = True
-                break
-        if is_funding == FUNDING_WAIT:
-            funding_wait_count += 1
-            print('funding_wait_count=' + str(funding_wait_count))
-            if funding_wait_count > FUNDING_WAIT_MAX:
-                reason = 'funding not started long time'
                 stop_order = True
                 break
         if (bak_funding == is_funding) and (is_funding != FUNDING_FUNDED):
@@ -306,7 +297,7 @@ def requester(client):
             # request invoice
             log_print('[REQ]invoice')
             client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
-            client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 500,"node3" ]}')
+            client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 2000,"node3" ]}')
             pay_count += 1
             time.sleep(PAY_SEC)
         else:
