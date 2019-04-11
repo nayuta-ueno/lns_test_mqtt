@@ -61,8 +61,28 @@ git clone https://github.com/nayuta-ueno/lns_test_mqtt.git
 cp lns_test_mqtt/rrt_cln*.sh ./lightning/
 ```
 
+## regtest feerate
+
+regtestを使う場合、estimatesmartfeeで取得できないことがあるため、
+`regtestkeepfee.sh`というスクリプトを用意した。
+
+```bash
+bitcoin-cli getblockcount
+
+# blockが少ない場合は、予め作成しておくこと(500くらい作成している)
+# feerateが既に取得できて、それが非常に高額な場合は、問題なければブロックチェーンごと削除する
+
+./regtestkeepfee.sh&
+```
+
 ## テスト内容
 
+* [mqtt_req4.py](README_req4.md)
 * [mqtt_req3.py](README_req3.md)
 * [mqtt_req2.py](README_req2.md)
 * (中止)mqtt_req1.py
+
+## 補足
+
+* MQTTを使っているので、テストが動いているかどうかはMQTTのsubscriberを使って監視するのが良いだろう
+  * `lntest1`を使うように書いているので、一度に動かすとどれがどれかわからなくなるという問題があるので、topicでフィルタできるようにすべきか

@@ -1,22 +1,23 @@
 # mqtt_req3.py
 
-```
+```text
 NODE1 -+-> HOP --> NODE2
        |
 NODE3 -+
 ```
-  * 説明文はregtestとして書いているが、IPアドレスなどを変更することでtestnetなどでも動くはず
-  * 都合上、`&`を付けてバックグラウンド起動させているが、個別にコンソールを立てた方がわかりやすいだろう
-    * コンソールは、1つのLNノードに対して2つ、テスト制御として1つ(このテストは4ノードなので、最低9コンソール)
-  * NODE1(port=3333), NODE2(port=4444), NODE3(port=5555): c-lightning
-  * HOP = ptarmigan(port=9735)
-  * payer=NODE1, NODE3、payee=NODE2を繰り返す
+
+* 説明文はregtestとして書いているが、IPアドレスなどを変更することでtestnetなどでも動くはず
+* 都合上、`&`を付けてバックグラウンド起動させているが、個別にコンソールを立てた方がわかりやすいだろう
+  * コンソールは、1つのLNノードに対して2つ、テスト制御として1つ(このテストは4ノードなので、最低9コンソール)
+* NODE1(port=3333), NODE2(port=4444), NODE3(port=5555): c-lightning
+* HOP = ptarmigan(port=9735)
+* payer=NODE1, NODE3、payee=NODE2を繰り返す
 
 0. bitcoindをregtestで起動
 
 1. ノード立ち上げ
 
-```
+```bash
 cd lns_mqtt_test
 cp rrt_cln_daemon.sh ../lightning/
 cd ../lightning
@@ -39,7 +40,7 @@ cd lns_mqtt_test
 
 2. NODE1, NODE3に入金
 
-```
+```bash
 cd lns_mqtt_test
 ./rrt_cln_pay.sh 3333
 ./rrt_cln_pay.sh 5555
@@ -47,14 +48,14 @@ cd lns_mqtt_test
 
 3. regtestのgenerator起動
 
-```
+```bash
 cd lns_mqtt_test
 ./regtestkeepfee.sh&
 ```
 
 4. 2の入金が反映されるのを待つ
 
-```
+```bash
 cd lns_mqtt_test
 ./rrt_cln_fund.sh 3333
 ./rrt_cln_fund.sh 5555
@@ -62,7 +63,21 @@ cd lns_mqtt_test
 
 5. テスト開始
 
-```
+```bash
 cd lns_mqtt_test
 python3 mqtt_req3.py <NODE1> <NODE3> <HOP> <NODE2>
+```
+
+----
+
+## 簡易実行
+
+* regtest
+* `PORTBASE`: 使い始めるポート番号
+  * 1ノードで10個ずつインクリメントして使う
+* `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
+  * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
+
+```bash
+./rrt_req3.sh
 ```
