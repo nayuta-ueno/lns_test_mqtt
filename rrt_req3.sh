@@ -1,5 +1,7 @@
 #!/bin/bash
+set -eu
 
+TESTNAME=$1
 SUFFIX=
 PORTBASE=1110
 START_GENERATOR=0
@@ -46,11 +48,11 @@ sleep 5
 # responser
 cd lns_test_mqtt
 for i in ${CLN[@]}; do
-	nohup python3 mqtt_responser.py clightning ${ADDR} ${i} /tmp/light${i} > ${LOGDIR}/mqtt_cln${i}.log&
+	nohup python3 mqtt_responser.py ${TESTNAME} clightning ${ADDR} ${i} /tmp/light${i} > ${LOGDIR}/mqtt_cln${i}.log&
 	PID+=($!)
 done
 for i in ${PTARM[@]}; do
-	nohup python3 mqtt_responser.py ptarm ${ADDR} ${i} > ${LOGDIR}/mqtt_ptarm${i}.log&
+	nohup python3 mqtt_responser.py ${TESTNAME} ptarm ${ADDR} ${i} > ${LOGDIR}/mqtt_ptarm${i}.log&
 	PID+=($!)
 done
 
@@ -98,11 +100,12 @@ NODEID2=`python3 clightning.py /tmp/light${NODE2}`
 NODEID3=`python3 clightning.py /tmp/light${NODE3}`
 HOPID=`python3 ptarm.py ${ADDR} ${HOP}`
 
+echo TESTNAME=${TESTNAME}
 echo NODE1=${NODEID1}
 echo NODE2=${NODEID2}
 echo NODE3=${NODEID3}
 echo HOP=${HOPID}
 
-nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
+nohup python3 mqtt_req3.py ${TESTNAME} ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}

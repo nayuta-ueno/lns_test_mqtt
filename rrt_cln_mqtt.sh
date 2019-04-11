@@ -1,12 +1,13 @@
 #!/bin/sh
 set -eu
 
-if [ $# -eq 1 ]; then
-	PORT=$1
+TESTNAME=$1
+if [ $# -eq 2 ]; then
+	PORT=$2
 	ADDR=127.0.0.1
 else
-	PORT=$1
-	ADDR=$2
+	PORT=$2
+	ADDR=$3
 fi
-python3 mqtt_responser.py clightning ${ADDR} ${PORT} /tmp/light${PORT}
+python3 mqtt_responser.py ${TESTNAME} clightning ${ADDR} ${PORT} /tmp/light${PORT}
 
