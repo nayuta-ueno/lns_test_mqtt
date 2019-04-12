@@ -1,5 +1,4 @@
 #!/bin/sh
-
 set -eu
 
 TESTNAME=$1
@@ -11,4 +10,3 @@ else
 	ADDR=$3
 fi
 python3 mqtt_responser.py ${TESTNAME} ptarm ${ADDR} ${PORT}
-

@@ -1,5 +1,4 @@
 #!/bin/sh
-
 set -eu
 
 PORT=$1

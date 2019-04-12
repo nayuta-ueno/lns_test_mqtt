@@ -1,15 +1,32 @@
 #!/bin/bash
 set -eu
 
-TESTNAME=$1
 SUFFIX=
 PORTBASE=1110
 START_GENERATOR=0
+TESTNAME=REQ3
 
-KILLSH=kill_req3${SUFFIX}.sh
-LOGDIR=`pwd`/logs3${SUFFIX}
+KILLSH=kill_${TESTNAME}_${SUFFIX}.sh
+LOGDIR=`pwd`/logs_${TESTNAME}_${SUFFIX}
 ADDR=127.0.0.1
 
+read_ini() {
+	# ini setting
+	INI_FILE=config.ini
+	INI_SECTION=${TESTNAME}
+
+	# ini parser
+	eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
+		-e 's/;.*$//' \
+		-e 's/[[:space:]]*$//' \
+		-e 's/^[[:space:]]*//' \
+		-e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+	< $INI_FILE \
+		| sed -n -e "/^\[$INI_SECTION\]/,/^\s*\[/{/^[^;].*\=.*/p;}"`
+	echo ${PORTBASE}
+}
+
+PORTBASE=`read_ini`
 NODE1=$((PORTBASE))
 NODE2=$((PORTBASE+10))
 NODE3=$((PORTBASE+20))
@@ -100,12 +117,12 @@ NODEID2=`python3 clightning.py /tmp/light${NODE2}`
 NODEID3=`python3 clightning.py /tmp/light${NODE3}`
 HOPID=`python3 ptarm.py ${ADDR} ${HOP}`
 
-echo TESTNAME=${TESTNAME}
-echo NODE1=${NODEID1}
-echo NODE2=${NODEID2}
-echo NODE3=${NODEID3}
-echo HOP=${HOPID}
+echo TESTNAME= ${TESTNAME}
+echo NODE1= ${NODEID1}
+echo NODE2= ${NODEID2}
+echo NODE3= ${NODEID3}
+echo HOP=   ${HOPID}
 
-nohup python3 mqtt_req3.py ${TESTNAME} ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
+nohup python3 mqtt_req3.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}

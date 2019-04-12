@@ -14,12 +14,12 @@ from lnnode import LnNode
 from ptarm import Ptarm
 from ptarmj import PtarmJ
 import clightning
+import configparser
 
 
-MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
-MQTT_PORT = 1883
+config = configparser.ConfigParser()
 
-testname = ''
+TOPIC_PREFIX = ''
 ln_node = ''
 node_id = ''
 peer_node = []
@@ -37,7 +37,7 @@ def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
     node_id = ln_node.get_nodeid()
     print('node_id= ' + node_id)
-    client.subscribe(testname + '/#')
+    client.subscribe(TOPIC_PREFIX + '/#')
     th = threading.Thread(target=poll_status, args=(client,), name='poll_status')
     th.start()
     print('MQTT connected')
@@ -46,13 +46,13 @@ def on_connect(client, user_data, flags, response_code):
 def on_message(client, _, msg):
     try:
         payload = str(msg.payload, 'utf-8')
-        if msg.topic == testname + '/request/' + node_id:
+        if msg.topic == TOPIC_PREFIX + '/request/' + node_id:
             #print('REQUEST[' + msg.topic + ']' + payload)
             exec_request(client, json.loads(payload))
-        elif msg.topic == testname + '/notify/' + node_id:
+        elif msg.topic == TOPIC_PREFIX + '/notify/' + node_id:
             #print('NOTIFY[' + msg.topic + ']' + payload)
             exec_notify(client, json.loads(payload))
-        elif msg.topic == testname + '/stop/' + node_id:
+        elif msg.topic == TOPIC_PREFIX + '/stop/' + node_id:
             print('STOP!')
             _killme()
     except:
@@ -68,7 +68,7 @@ def poll_status(client):
             status.append(stat)
             # print('status=', status)
         res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port}
-        client.publish(testname + '/status/' + node_id, json.dumps(res_dict))
+        client.publish(TOPIC_PREFIX + '/status/' + node_id, json.dumps(res_dict))
 
         # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
         sys.stdout.flush()
@@ -99,7 +99,7 @@ def exec_request(client, json_msg):
         print('method=', method)
     if len(res) > 0:
         print('res=' + res)
-        client.publish(testname + '/response/' + node_id, res)
+        client.publish(TOPIC_PREFIX + '/response/' + node_id, res)
 
 
 def exec_notify(client, json_msg):
@@ -115,8 +115,10 @@ def exec_notify(client, json_msg):
 
 
 def main():
+    host = config.get('MQTT', 'BROKER_URL')
+    port = config.getint('MQTT', 'BROKER_PORT')
     mqtt_client = paho.mqtt.client.Client(protocol=paho.mqtt.client.MQTTv311)
-    mqtt_client.connect(MQTT_HOST, port=MQTT_PORT, keepalive=60)
+    mqtt_client.connect(host, port=port, keepalive=60)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
     mqtt_client.loop_forever()
@@ -124,13 +126,17 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print('usage: ' + sys.argv[0] + ' <testname> <ptarm or clightning> <ipaddr> <port> [option]')
+        print('usage: ' + sys.argv[0] + ' <INI FILENAME> <ptarm or clightning> <ipaddr> <port> [option]')
         print('    [ptarm option]none')
         print('    [clightning option]rpc-file')
         sys.exit()
 
     argv = None
+
+    config.read('./config.ini')
     testname = sys.argv[1]
+    TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
+
     if sys.argv[2] == 'ptarm':
         ln_node = Ptarm()
     elif sys.argv[2] == 'ptarmj':

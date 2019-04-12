@@ -1,10 +1,12 @@
 # mqtt_req2.py
 
 `NODE1 --> HOP --> NODE2`
-  * regtestの想定
-  * NODE1 = c-lightning port=3333
-  * HOP = ptarmigan port=9735
-  * NODE2 = c-lightning port=4444
+
+* 説明はregtestの想定
+  * 
+* NODE1 = c-lightning port=3333
+* HOP = ptarmigan port=9735
+* NODE2 = c-lightning port=4444
 
 1. NODE1を動かす
 
@@ -15,7 +17,7 @@ cd lightning
 
 # responser
 cd lns_test_mqtt
-./rrt_cln_mqtt.sh 3333
+./rrt_cln_mqtt.sh REQ2 3333
 (NODE1のnode_idが出力される)
 ```
 
@@ -28,7 +30,7 @@ cd lightning
 
 # responser
 cd lns_test_mqtt
-./rrt_cln_mqtt.sh 4444
+./rrt_cln_mqtt.sh REQ2 4444
 (NODE2のnode_idが出力される)
 ```
 
@@ -42,7 +44,7 @@ rm -rf db logs
 
 # responser
 cd lns_test_mqtt
-./rrt_pt.sh 9735
+./rrt_pt.sh REQ2 9735
 (HOPのnode_idが出力される)
 ```
 
@@ -68,4 +70,22 @@ cd lns_mqtt_test
 ```
 cd lns_test_mqtt
 python3 mqtt_req2.py <NODE1のnode_id> <HOPのnode_id> <NODE2のnode_id>
+```
+
+----
+
+## 簡易実行
+
+* regtest
+  * 事前に`regtestkeepfee.sh`をバックグラウンドで動かしておくのが良い。
+* config.iniの編集
+  * `TOPIC_PREFIX`: MQTT topicのprefix
+  * `PORTBASE`: 使い始めるポート番号
+    * 1ノードで10個ずつインクリメントして使う
+* rrt_req2.shの編集
+  * `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
+    * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
+
+```bash
+./rrt_req2.sh
 ```

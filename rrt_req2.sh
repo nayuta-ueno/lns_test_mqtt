@@ -4,7 +4,7 @@ set -eu
 SUFFIX=
 PORTBASE=1110
 START_GENERATOR=0
-TESTNAME=REQ4
+TESTNAME=REQ2
 
 KILLSH=kill_${TESTNAME}_${SUFFIX}.sh
 LOGDIR=`pwd`/logs_${TESTNAME}_${SUFFIX}
@@ -29,11 +29,9 @@ read_ini() {
 PORTBASE=`read_ini`
 NODE1=$((PORTBASE))
 NODE2=$((PORTBASE+10))
-NODE3=$((PORTBASE+20))
-NODE4=$((PORTBASE+30))
-HOP=$((PORTBASE+40))
+HOP=$((PORTBASE+20))
 
-CLN=(${NODE1} ${NODE2} ${NODE3} ${NODE4})
+CLN=(${NODE1} ${NODE2})
 PTARM=(${HOP})
 PIDS=()
 
@@ -115,17 +113,13 @@ echo !!!!!!!!!!!!!!!!!!
 
 NODEID1=`python3 clightning.py /tmp/light${NODE1}`
 NODEID2=`python3 clightning.py /tmp/light${NODE2}`
-NODEID3=`python3 clightning.py /tmp/light${NODE3}`
-NODEID4=`python3 clightning.py /tmp/light${NODE4}`
 HOPID=`python3 ptarm.py ${ADDR} ${HOP}`
 
 echo TESTNAME= ${TESTNAME}
 echo NODE1= ${NODEID1}
 echo NODE2= ${NODEID2}
-echo NODE3= ${NODEID3}
-echo NODE4= ${NODEID4}
 echo HOP=   ${HOPID}
 
-nohup python3 mqtt_req4.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} ${NODEID4} > ${LOGDIR}/mqtt_req.log&
+nohup python3 mqtt_req2.py ${NODEID1} ${HOPID} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}

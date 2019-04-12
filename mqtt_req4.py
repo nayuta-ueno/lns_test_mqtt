@@ -36,11 +36,15 @@ import string
 import paho.mqtt.client
 import socket
 import threading
+import configparser
 
 
-# MQTT broker
-MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
-MQTT_PORT = 1883
+config = configparser.ConfigParser()
+
+# MQTT
+MQTT_HOST = ''
+MQTT_PORT = 0
+TOPIC_PREFIX = ''
 
 # random requester name
 RANDNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
@@ -53,7 +57,6 @@ FUNDING_CLOSING = 3
 
 PAY_START_BLOCK = 8
 PAY_FAIL_BLOCK = 10
-
 
 # 使うノード数
 NODE_NUM = 5
@@ -72,16 +75,15 @@ NODE_LABEL = ['node1', 'node3', 'hop', 'node2', 'node4']
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [ [NODE1, HOP], [NODE2, HOP], [NODE3, HOP], [NODE4, HOP] ]
 NODE_OPEN = [ [NODE1, HOP], [HOP, NODE2], [NODE3, HOP], [HOP, NODE4] ]
-NODE_OPEN_AMOUNT = 50000
+NODE_OPEN_AMOUNT = 0
 
 # 送金回数。この回数だけ送金後、mutual closeする。
-PAY_COUNT_MAX = 5
+PAY_COUNT_MAX = 0
 
 # 今のところ送金完了が分からないので、一定間隔で送金している
-PAY_SEC = 10
+PAY_SEC = 0
 
 # global variable
-testname = ''
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
@@ -102,7 +104,7 @@ fail_count = 0
 # MQTT: connect
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
-    client.subscribe(testname + '/#')
+    client.subscribe(TOPIC_PREFIX + '/#')
     th1 = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
     th1.start()
     th2 = threading.Thread(target=notifier, args=(client,), name='notifier', daemon=True)
@@ -120,7 +122,7 @@ def on_message(client, _, msg):
     #   'stop/ + node_id        : requester --> responser'
     ret, recv_id = proc_topic(client, msg)
     if not ret:
-        if (len(recv_id) != 0) and msg.topic.startswith(testname + '/notify/'):
+        if (len(recv_id) != 0) and msg.topic.startswith(TOPIC_PREFIX + '/notify/'):
             print('yet: ' + node2label(recv_id))
         return
 
@@ -137,7 +139,7 @@ def notifier(client):
         conn_dict = { "connect": json_node_connect() }
         for node in node_id:
             # print('notify: ' + node)
-            client.publish(testname + '/notify/' + node, json.dumps(conn_dict))
+            client.publish(TOPIC_PREFIX + '/notify/' + node, json.dumps(conn_dict))
 
         if is_funding == FUNDING_NONE:
             print('connected list:', array_connected_node)
@@ -196,7 +198,7 @@ def poll_time(client):
 def proc_topic(client, msg):
     global dict_recv_node
 
-    if msg.topic == testname + '/stop/' + RANDNAME:
+    if msg.topic == TOPIC_PREFIX + '/stop/' + RANDNAME:
         print('STOP!')
         kill_me()
 
@@ -204,7 +206,7 @@ def proc_topic(client, msg):
     mine = False
     recv_id = ''
     try:
-        if msg.topic.startswith(testname + '/response/') or msg.topic.startswith(testname + '/status/'):
+        if msg.topic.startswith(TOPIC_PREFIX + '/response/') or msg.topic.startswith(TOPIC_PREFIX + '/status/'):
             if msg.topic.rfind('/') != -1:
                 recv_id = msg.topic[msg.topic.rfind('/') + 1:]
                 for i in range(NODE_NUM):
@@ -229,9 +231,9 @@ def proc_payload(client, msg, recv_id):
         payload = str(msg.payload, 'utf-8')
         if len(payload) == 0:
             return
-        if msg.topic.startswith(testname + '/response/'):
+        if msg.topic.startswith(TOPIC_PREFIX + '/response/'):
             message_response(client, json.loads(payload), msg, recv_id)
-        elif msg.topic.startswith(testname + '/status/'):
+        elif msg.topic.startswith(TOPIC_PREFIX + '/status/'):
             message_status(client, json.loads(payload), msg, recv_id)
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
@@ -300,8 +302,8 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            client.publish(testname + '/request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
-            client.publish(testname + '/request/' + node_id[NODE4], '{"method":"invoice","params":[ 2000,"node3" ]}')
+            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
+            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE4], '{"method":"invoice","params":[ 2000,"node3" ]}')
             pay_count += 1
             time.sleep(PAY_SEC)
         else:
@@ -316,10 +318,10 @@ def requester(client):
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2])
     if json_msg['result'][2] == 'node1':
-        client.publish(testname + '/request/' + node_id[NODE1],
+        client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE1],
                 '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
     elif json_msg['result'][2] == 'node3':
-        client.publish(testname + '/request/' + node_id[NODE3],
+        client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE3],
                 '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
@@ -339,7 +341,7 @@ def connect_all(client):
             log_print('[REQ]connect: ' + NODE_LABEL[node[0]] + '=>' + NODE_LABEL[node[1]])
             ipaddr = dict_status_node[connectee]['ipaddr']
             port = dict_status_node[connectee]['port']
-            client.publish(testname + '/request/' + connector, \
+            client.publish(TOPIC_PREFIX + '/request/' + connector, \
                 '{"method":"connect", "params":['
                     '"' + connectee + '", '
                     '"' + ipaddr + '", ' + str(port) + ' ]}')
@@ -353,7 +355,7 @@ def open_all(client):
         opener = node_id[node[0]]
         openee = node_id[node[1]]
         print('[REQ]open: ' + NODE_LABEL[node[0]] + ' => ' + NODE_LABEL[node[1]])
-        client.publish(testname + '/request/' + opener,
+        client.publish(TOPIC_PREFIX + '/request/' + opener,
                 '{"method":"openchannel","params":[ "' + openee + '", ' + str(NODE_OPEN_AMOUNT) + ' ]}')
     is_funding = FUNDING_WAIT
 
@@ -366,7 +368,7 @@ def close_all(client):
         closer = node_id[node[0]]
         closee = node_id[node[1]]
         print('[REQ]close: ' + NODE_LABEL[node[0]] + '=>' + NODE_LABEL[node[1]])
-        client.publish(testname + '/request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
+        client.publish(TOPIC_PREFIX + '/request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
     is_funding = FUNDING_CLOSING
     array_connected_node = []
 
@@ -374,8 +376,8 @@ def close_all(client):
 def stop_all(client, reason):
     for node in node_id:
         print('stop: ' + node)
-        client.publish(testname + '/stop/' + node, reason)
-    client.publish(testname + '/stop/' + RANDNAME, reason)
+        client.publish(TOPIC_PREFIX + '/stop/' + node, reason)
+    client.publish(TOPIC_PREFIX + '/stop/' + RANDNAME, reason)
     log_print('send stop: ' + reason)
 
 
@@ -517,21 +519,30 @@ def main():
 #################################################################################
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' TESTNAME NODE1 NODE3 HOP NODE2 NODE4')
+    if len(sys.argv) != 1 + NODE_NUM:
+        print('usage: ' + sys.argv[0] + ' NODE1 NODE3 HOP NODE2 NODE4')
         sys.exit()
     for i in range(NODE_NUM):
-        if len(sys.argv[2 + i]) != 66:
-            print('invalid length: ' + str(i) + ': ' + sys.argv[2 + i])
+        if len(sys.argv[1 + i]) != 66:
+            print('invalid length: ' + str(i) + ': ' + sys.argv[1 + i])
             sys.exit()
 
+    config.read('./config.ini')
+    testname = 'REQ4'
+
+    MQTT_HOST = config.get('MQTT', 'BROKER_URL')
+    MQTT_PORT = config.getint('MQTT', 'BROKER_PORT')
+    TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
+    NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
+    PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
+    PAY_SEC = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+
     # 引数とnode_idの対応
-    testname = sys.argv[1]
-    node_id[NODE1] = sys.argv[2]
-    node_id[NODE3] = sys.argv[3]
-    node_id[HOP] = sys.argv[4]
-    node_id[NODE2] = sys.argv[5]
-    node_id[NODE4] = sys.argv[6]
+    node_id[NODE1] = sys.argv[1]
+    node_id[NODE3] = sys.argv[2]
+    node_id[HOP] = sys.argv[3]
+    node_id[NODE2] = sys.argv[4]
+    node_id[NODE4] = sys.argv[5]
 
     for num in range(NODE_NUM):
         print('  ' + NODE_LABEL[num] + '= ' + node_id[num])

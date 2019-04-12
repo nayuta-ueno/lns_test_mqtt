@@ -13,10 +13,14 @@ NODE3 -+        +--> NODE4
 ## 簡易実行
 
 * regtest
-* `PORTBASE`: 使い始めるポート番号
-  * 1ノードで10個ずつインクリメントして使う
-* `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
-  * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
+  * 事前に`regtestkeepfee.sh`をバックグラウンドで動かしておくのが良い。
+* config.iniの編集
+  * `TOPIC_PREFIX`: MQTT topicのprefix
+  * `PORTBASE`: 使い始めるポート番号
+    * 1ノードで10個ずつインクリメントして使う
+* rrt_req4.shの編集
+  * `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
+    * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
 
 ```bash
 ./rrt_req4.sh

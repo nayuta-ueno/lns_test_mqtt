@@ -6,7 +6,7 @@ NODE1 -+-> HOP --> NODE2
 NODE3 -+
 ```
 
-* 説明文はregtestとして書いているが、IPアドレスなどを変更することでtestnetなどでも動くはず
+* 説明文はregtestとして書いているが、IPアドレスなどを変更することでtestnetなどでも動く
 * 都合上、`&`を付けてバックグラウンド起動させているが、個別にコンソールを立てた方がわかりやすいだろう
   * コンソールは、1つのLNノードに対して2つ、テスト制御として1つ(このテストは4ノードなので、最低9コンソール)
 * NODE1(port=3333), NODE2(port=4444), NODE3(port=5555): c-lightning
@@ -32,10 +32,10 @@ cd rt
 popd
 
 cd lns_mqtt_test
-./rrt_cln_mqtt.sh 3333&
-./rrt_cln_mqtt.sh 4444&
-./rrt_cln_mqtt.sh 5555&
-./rrt_pt.sh 9735&
+./rrt_cln_mqtt.sh REQ3 3333&
+./rrt_cln_mqtt.sh REQ3 4444&
+./rrt_cln_mqtt.sh REQ3 5555&
+./rrt_pt.sh REQ3 9735&
 ```
 
 2. NODE1, NODE3に入金
@@ -73,10 +73,14 @@ python3 mqtt_req3.py <NODE1> <NODE3> <HOP> <NODE2>
 ## 簡易実行
 
 * regtest
-* `PORTBASE`: 使い始めるポート番号
-  * 1ノードで10個ずつインクリメントして使う
-* `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
-  * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
+  * 事前に`regtestkeepfee.sh`をバックグラウンドで動かしておくのが良い。
+* config.iniの編集
+  * `TOPIC_PREFIX`: MQTT topicのprefix
+  * `PORTBASE`: 使い始めるポート番号
+    * 1ノードで10個ずつインクリメントして使う
+* rrt_req3.shの編集
+  * `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
+    * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
 
 ```bash
 ./rrt_req3.sh

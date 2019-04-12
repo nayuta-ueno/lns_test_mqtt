@@ -10,4 +10,3 @@ else
 	ADDR=$3
 fi
 python3 mqtt_responser.py ${TESTNAME} clightning ${ADDR} ${PORT} /tmp/light${PORT}
-

@@ -29,14 +29,18 @@ import string
 import paho.mqtt.client
 import socket
 import threading
+import configparser
 
 
-# MQTT broker
-MQTT_HOST = 'lntest1.japaneast.cloudapp.azure.com'
-MQTT_PORT = 1883
+config = configparser.ConfigParser()
+
+# MQTT
+MQTT_HOST = ''
+MQTT_PORT = ''
+TOPIC_PREFIX = ''
 
 # random requester name
-TESTNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
+RANDNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
 
 # const variable
 FUNDING_WAIT_MAX = 10   # funding_wait_countの上限
@@ -59,10 +63,13 @@ NODE_LABEL = ['node1', 'hop', 'node2']
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [ [NODE1, HOP], [NODE2, HOP] ]
+NODE_OPEN_AMOUNT = 0
 
 # 送金回数。この回数だけ送金後、mutual closeする。
-PAY_COUNT_MAX = 1000
+PAY_COUNT_MAX = 0
 
+# 今のところ送金完了が分からないので、一定間隔で送金している
+PAY_SEC = 0
 
 # global variable
 node_id = [''] * NODE_NUM
@@ -81,7 +88,7 @@ fail_count = 0
 # MQTT: connect
 def on_connect(client, user_data, flags, response_code):
     del user_data, flags, response_code
-    client.subscribe('#')
+    client.subscribe(TOPIC_PREFIX + '/#')
     th = threading.Thread(target=poll_time, args=(client,), name='poll_time', daemon=True)
     th = threading.Thread(target=notifier, args=(client,), name='notifier', daemon=True)
     th.start()
@@ -113,7 +120,11 @@ def notifier(client):
         conn_dict = { "connect": json_node_connect() }
         for node in node_id:
             # print('notify: ' + node)
-            client.publish('notify/' + node, json.dumps(conn_dict))
+            client.publish(TOPIC_PREFIX + '/notify/' + node, json.dumps(conn_dict))
+
+        # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
+        sys.stdout.flush()
+
         time.sleep(5)
 
 
@@ -154,7 +165,7 @@ def poll_time(client):
 def proc_topic(client, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester, is_funding, pay_count
 
-    if msg.topic == 'stop/' + TESTNAME:
+    if msg.topic == TOPIC_PREFIX + '/stop/' + RANDNAME:
         print('STOP!')
         kill_me()
 
@@ -162,7 +173,7 @@ def proc_topic(client, msg):
     mine = False
     recv_id = ''
     try:
-        if msg.topic.startswith('response/') or msg.topic.startswith('status/'):
+        if msg.topic.startswith(TOPIC_PREFIX + '/response/') or msg.topic.startswith(TOPIC_PREFIX + '/status/'):
             if msg.topic.rfind('/') != -1:
                 recv_id = msg.topic[msg.topic.rfind('/') + 1:]
                 for i in range(NODE_NUM):
@@ -188,9 +199,9 @@ def proc_payload(client, msg, recv_id):
         payload = str(msg.payload, 'utf-8')
         if len(payload) == 0:
             return
-        if msg.topic.startswith('response/'):
+        if msg.topic.startswith(TOPIC_PREFIX + '/response/'):
             ret = message_response(client, json.loads(payload), msg, recv_id)
-        elif msg.topic.startswith('status/'):
+        elif msg.topic.startswith(TOPIC_PREFIX + '/status/'):
             message_status(client, json.loads(payload), msg, recv_id)
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
@@ -262,15 +273,15 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            client.publish('request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
+            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
             pay_count += 1
-            time.sleep(10)      # 送金の完了にかかわらず要求する。実環境に合わせて時間を調整しよう。
+            time.sleep(PAY_SEC)
         else:
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
             pay_count = 0
-            client.publish('request/' + node_id[HOP], '{"method":"closechannel", "params":[ "' + node_id[NODE1] + '" ]}')
-            client.publish('request/' + node_id[HOP], '{"method":"closechannel", "params":[ "' + node_id[NODE2] + '" ]}')
+            client.publish(TOPIC_PREFIX + '/request/' + node_id[HOP], '{"method":"closechannel", "params":[ "' + node_id[NODE1] + '" ]}')
+            client.publish(TOPIC_PREFIX + '/request/' + node_id[HOP], '{"method":"closechannel", "params":[ "' + node_id[NODE2] + '" ]}')
             break
     print('exit requester')
 
@@ -286,7 +297,7 @@ def proc_connect_start(client):
         log_print('[REQ]connect: ' + NODE_LABEL[conn[0]] + '=>' + NODE_LABEL[conn[1]])
         ipaddr = dict_status_node[connectee]['ipaddr']
         port = dict_status_node[connectee]['port']
-        client.publish('request/' + connector, \
+        client.publish(TOPIC_PREFIX + '/request/' + connector, \
             '{"method":"connect", "params":['
                 '"' + connectee + '", '
                 '"' + ipaddr + '", ' + str(port) + ' ]}')
@@ -295,16 +306,16 @@ def proc_connect_start(client):
 def proc_connected(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]connect-->[REQ]open ' + node2label(recv_id) + '..' + node2label(json_msg['result'][2]))
     if recv_id == node_id[NODE1]:
-        client.publish('request/' + node_id[NODE1],
-                '{"method":"openchannel","params":[ "' + node_id[HOP] + '", 50000 ]}')
+        client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE1],
+                '{"method":"openchannel","params":[ "' + node_id[HOP] + '", ' + str(NODE_OPEN_AMOUNT) + ' ]}')
     elif recv_id == node_id[NODE2]:
-        client.publish('request/' + node_id[HOP],
-                '{"method":"openchannel","params":[ "' + node_id[NODE2] + '", 50000 ]}')
+        client.publish(TOPIC_PREFIX + '/request/' + node_id[HOP],
+                '{"method":"openchannel","params":[ "' + node_id[NODE2] + '", ' + str(NODE_OPEN_AMOUNT) + ' ]}')
 
 
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay')
-    client.publish('request/' + node_id[NODE1],
+    client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE1],
             '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
@@ -315,7 +326,7 @@ def close_all(client):
         closer = node_id[conn[0]]
         closee = node_id[conn[1]]
         log_print('[REQ]close: ' + NODE_LABEL[conn[0]] + '=>' + NODE_LABEL[conn[1]])
-        client.publish('request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
+        client.publish(TOPIC_PREFIX + '/request/' + closer, '{"method":"closechannel", "params":[ "' + closee + '" ]}')
 
 
 # message: topic="response/#"
@@ -393,8 +404,8 @@ def message_status(client, json_msg, msg, recv_id):
 def publish_stop(client):
     for node in node_id:
         print('stop: ' + node)
-        client.publish('stop/' + node, 'stop all')
-    client.publish('stop/' + TESTNAME, 'stop all')
+        client.publish(TOPIC_PREFIX + '/stop/' + node, 'stop all')
+    client.publish(TOPIC_PREFIX + '/stop/' + RANDNAME, 'stop all')
 
 
 def kill_me():
@@ -459,6 +470,17 @@ if __name__ == '__main__':
         if len(sys.argv[i + 1]) != 66:
             print('invalid length: ' + str(i) + ': ' + sys.argv[i + 1])
             sys.exit()
+
+    config.read('./config.ini')
+    testname = 'REQ2'
+
+    MQTT_HOST = config.get('MQTT', 'BROKER_URL')
+    MQTT_PORT = config.getint('MQTT', 'BROKER_PORT')
+    TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
+    NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
+    PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
+    PAY_SEC = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+
     node_id[NODE1] = sys.argv[1]
     node_id[HOP] = sys.argv[2]
     node_id[NODE2] = sys.argv[3]
