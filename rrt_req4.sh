@@ -126,6 +126,6 @@ echo NODE3= ${NODEID3}
 echo NODE4= ${NODEID4}
 echo HOP=   ${HOPID}
 
-nohup python3 mqtt_req4.py ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} ${NODEID4} > ${LOGDIR}/mqtt_req.log&
+nohup python3 mqtt_req4.py ${TESTNAME} ${NODEID1} ${NODEID3} ${HOPID} ${NODEID2} ${NODEID4} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}

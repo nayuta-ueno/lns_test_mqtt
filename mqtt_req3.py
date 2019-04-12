@@ -517,16 +517,17 @@ def main():
 #################################################################################
 
 if __name__ == '__main__':
-    if len(sys.argv) != 1 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' NODE1 NODE3 HOP NODE2')
+    if len(sys.argv) != 2 + NODE_NUM:
+        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE3 HOP NODE2')
         sys.exit()
     for i in range(NODE_NUM):
-        if len(sys.argv[1 + i]) != 66:
-            print('invalid length: ' + str(i) + ': ' + sys.argv[1 + i])
+        if len(sys.argv[2 + i]) != 66:
+            print('invalid length: ' + str(i) + ': ' + sys.argv[2 + i])
             sys.exit()
 
     config.read('./config.ini')
-    testname = 'REQ3'
+    testname = sys.argv[1]
+    print('testname= ' + testname)
 
     MQTT_HOST = config.get('MQTT', 'BROKER_URL')
     MQTT_PORT = config.getint('MQTT', 'BROKER_PORT')
@@ -536,10 +537,10 @@ if __name__ == '__main__':
     PAY_SEC = config.getint(testname, 'PAY_INVOICE_ELAPSE')
 
     # 引数とnode_idの対応
-    node_id[NODE1] = sys.argv[1]
-    node_id[NODE3] = sys.argv[2]
-    node_id[HOP] = sys.argv[3]
-    node_id[NODE2] = sys.argv[4]
+    node_id[NODE1] = sys.argv[2]
+    node_id[NODE3] = sys.argv[3]
+    node_id[HOP] = sys.argv[4]
+    node_id[NODE2] = sys.argv[5]
 
     for num in range(NODE_NUM):
         print('  ' + NODE_LABEL[num] + '= ' + node_id[num])
