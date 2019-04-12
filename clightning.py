@@ -27,6 +27,10 @@ class CLightning(LnNode):
         self.lnrpc = LightningRpc(self.rpc_file)
 
 
+    def get_name(self):
+        return 'c-lightning'
+
+
     '''
     enum channel_state {
         /* In channeld, still waiting for lockin. */

@@ -30,11 +30,11 @@ mqtt_client_start() {
 }
 ####################################################
 
-echo ptarm: hop
+echo ptarm: payee
 
 SUFFIX=
 START_GENERATOR=0
-TESTNAME=REQ4
+TESTNAME=REQ4_PAYEE
 ADDR=127.0.0.1
 
 PORTBASE=`read_ini`
@@ -44,10 +44,10 @@ NODE3=$((PORTBASE+20))
 NODE4=$((PORTBASE+30))
 HOP=$((PORTBASE+40))
 
-#          NODE1 		NODE3 		HOP 		NODE2 	    NODE4
-NODE_SORT=(clightning	clightning 	ptarm     clightning 	clightning)
-CLN=(${NODE1} ${NODE2} ${NODE3} ${NODE4})
-PTARM=(${HOP})
+#          NODE1		NODE3		HOP			NODE2	NODE4
+NODE_SORT=(clightning	clightning	clightning	ptarm	clightning)
+CLN=(${HOP} ${NODE1} ${NODE3} ${NODE4})
+PTARM=(${NODE2})
 
 ####################
 

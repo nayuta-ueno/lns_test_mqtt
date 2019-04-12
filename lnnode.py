@@ -22,6 +22,11 @@ class LnNode(metaclass=ABCMeta):
 
 
     @abstractmethod
+    def get_name(self):
+        pass
+
+
+    @abstractmethod
     def get_status(self, peer):
         pass
 

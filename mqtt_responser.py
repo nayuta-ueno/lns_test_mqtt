@@ -67,7 +67,7 @@ def poll_status(client):
             stat = [str(st), peer, local_msat]
             status.append(stat)
             # print('status=', status)
-        res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port}
+        res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port, 'name': ln_node.get_name()}
         client.publish(TOPIC_PREFIX + '/status/' + node_id, json.dumps(res_dict))
 
         # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file

@@ -389,30 +389,33 @@ def message_response(client, json_msg, msg, recv_id):
     ret = True
     reason = ''
     if json_msg['result'][0] == 'connect':
+        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
         if json_msg['result'][1] == 'OK':
-            log_print('connected: ' + node2label(recv_id) + ' => ' + node2label(json_msg['result'][2]))
+            log_print('connected: ' + direction)
             pair = (recv_id, json_msg['result'][2])
             if pair not in array_connected_node:
                 array_connected_node.append(pair)
                 if (len(array_connected_node) == len(NODE_CONNECT)) and (is_funding != FUNDING_WAIT):
                     open_all(client)
         else:
-            log_print('fail connect[' + json_msg['result'][1] + ']: ' + node2label(recv_id) + ' => ' + node2label(json_msg['result'][2]))
+            log_print('fail connect[' + json_msg['result'][1] + ']: ' + direction)
             # ret = False   # close直後はありがちなので、スルー
             time.sleep(5)
 
     elif json_msg['result'][0] == 'openchannel':
+        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
         if json_msg['result'][1] == 'OK':
-            log_print('funding start: ' + node2label(json_msg['result'][2]))
+            log_print('funding start: ' + direction)
         else:
-            reason = 'funding fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2])
+            reason = 'funding fail[' + json_msg['result'][1] + ']: ' + direction
             ret = False
 
     elif json_msg['result'][0] == 'closechannel':
+        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
         if json_msg['result'][1] == 'OK':
-            log_print('closing start: ' + node2label(json_msg['result'][2]))
+            log_print('closing start: ' + direction)
         else:
-            reason = 'closing fail[' + json_msg['result'][1] + ']: ' + node2label(json_msg['result'][2])
+            reason = 'closing fail[' + json_msg['result'][1] + ']: ' + direction
             ret = False
 
     elif json_msg['result'][0] == 'invoice':

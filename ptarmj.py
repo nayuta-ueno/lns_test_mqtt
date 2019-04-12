@@ -19,6 +19,10 @@ class PtarmJ(PtarmBase):
         return cmd
 
 
+    def get_name(self):
+        return 'PtarmJ'
+
+
 if __name__ == '__main__':
     ipaddr = sys.argv[1]
     port = int(sys.argv[2])
