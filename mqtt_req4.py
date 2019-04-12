@@ -87,6 +87,7 @@ PAY_SEC = 0
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
+dict_amount = dict()
 
 array_connected_node = []
 
@@ -142,7 +143,7 @@ def notifier(client):
             client.publish(TOPIC_PREFIX + '/notify/' + node, json.dumps(conn_dict))
 
         if is_funding == FUNDING_NONE:
-            print('connected list:', array_connected_node)
+            # print('connected list:', array_connected_node)
             connect_all(client)
 
         # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
@@ -448,9 +449,21 @@ def message_response(client, json_msg, msg, recv_id):
 def message_status(client, json_msg, msg, recv_id):
     global dict_status_node
 
+    if pay_count > 0:
+        if recv_id in dict_status_node:
+            for stat in json_msg['status']:
+                #print('DBG:  stat ' + stat[0] + ':' + stat[1])
+                if stat[0] == 'Status.NORMAL':
+                    for old in dict_status_node[recv_id]['status']:
+                        if stat[1] == old[1] and old[0] == 'Status.NORMAL':
+                            print('AMT:' + stat[1] + \
+                                '  old=' + str(old[2]) + \
+                                ', new=' + str(stat[2]) + \
+                                ', diff=' + str(stat[2] - old[2]))
+                            break
+                    else:
+                        continue
     dict_status_node[recv_id] = json_msg
-    if json_msg['status'] != 'Status.NORMAL':
-        pass
 
 
 def kill_me():
