@@ -12,9 +12,9 @@ from ptarm_base import PtarmBase
 
 class Ptarm(PtarmBase):
     def get_open_command(self, node_id, amount):
-        fconf = self.linux_cmd_exec('./ptarm_fundin.sh ' + str(100000 + amount) + ' ' + str(amount) + ' 0')
+        fconf = self.linux_cmd_exec('./pay_fundin.py ' + str(amount) + ' 0 ""')
         if fconf is None:
-            print('fail: pay_fundin.sh')
+            print('fail: pay_fundin.py')
             return '{"result": ["openchannel","NG"]}'
         else:
             print('fconf=' + fconf)

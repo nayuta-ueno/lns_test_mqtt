@@ -196,7 +196,7 @@ class PtarmBase(LnNode):
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect((self.rpc_addr, self.rpc_port))
             client.send(req.encode())
-            response = client.recv(4096).decode('utf-8')
+            response = client.recv(1024 * 1024).decode('utf-8')
             time.sleep(1)
             # client.close()
         except:

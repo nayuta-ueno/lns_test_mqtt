@@ -44,7 +44,7 @@ echo ptarm: hop
 
 SUFFIX=
 START_GENERATOR=0
-TESTNAME=REQ5
+TESTNAME=REQ6
 ADDR=127.0.0.1
 
 PORTBASE=`read_ini`
@@ -52,14 +52,14 @@ NODE_PORT=()		# all node port
 NODE_TYPE=()		# node type
 CLN_NUM=0
 
-for i in `seq 0 19`; do
+for i in `seq 0 9`; do
 	port=$((PORTBASE+2*$i))
 	NODE_PORT+=(${port})
 	NODE_TYPE+=(clightning)
 	CLN_NUM=$((CLN_NUM+1))
 done
 
-port=$((PORTBASE+40))
+port=$((PORTBASE+20))
 NODE_PORT+=(${port})
 NODE_TYPE+=(ptarm)
 
@@ -174,8 +174,8 @@ for i in ${NODE_TYPE[@]}; do
 	cnt=$((cnt+1))
 done
 
-echo python3 mqtt_req5.py ${TESTNAME} ${NODEID[@]}
-nohup python3 mqtt_req5.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
+echo python3 mqtt_req6.py ${TESTNAME} ${NODEID[@]}
+nohup python3 mqtt_req6.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}
 

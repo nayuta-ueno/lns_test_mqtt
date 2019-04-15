@@ -5,17 +5,17 @@ node1--+-hop-+-node2
 node3--+     +-node4
        |     |
        |     |
-node19-+     +-node20
+node9--+     +-node10
 
     while True:
         [node1 => hop]connect
         [node3 => hop]connect
         ...
-        [node19 => hop]connect
+        [node9 => hop]connect
         [hop => node2]connect
         [hop => node4]connect
         ...
-        [hop => node20]connect
+        [hop => node10]connect
         [node1 => hop]open_channel
         [node3 => hop]open_channel
         [hop => node2]open_channel
@@ -66,7 +66,7 @@ PAY_START_BLOCK = 8
 PAY_FAIL_BLOCK = 10
 
 # 使うノード数
-NODE_NUM = 21
+NODE_NUM = 11
 
 # node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
@@ -80,24 +80,12 @@ NODE7=6
 NODE8=7
 NODE9=8
 NODE10=9
-NODE11=10
-NODE12=11
-NODE13=12
-NODE14=13
-NODE15=14
-NODE16=15
-NODE17=16
-NODE18=17
-NODE19=18
-NODE20=19
-HOP=20
+HOP=10
 
 # ログ用のラベル
 NODE_LABEL = [\
     'node1', 'node2', 'node3', 'node4', 'node5',\
     'node6', 'node7', 'node8', 'node9', 'node10',\
-    'node11', 'node12', 'node13', 'node14', 'node15',\
-    'node16', 'node17', 'node18', 'node19', 'node20',\
     'hop',\
 ]
 
@@ -105,9 +93,7 @@ NODE_LABEL = [\
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [\
     [NODE1, HOP], [NODE3, HOP], [NODE5, HOP], [NODE7, HOP], [NODE9, HOP],\
-    [NODE11, HOP], [NODE13, HOP], [NODE15, HOP], [NODE17, HOP], [NODE19, HOP],\
     [HOP, NODE2], [HOP, NODE4], [HOP, NODE6], [HOP, NODE8], [HOP, NODE10],\
-    [HOP, NODE12], [HOP, NODE14], [HOP, NODE16], [HOP, NODE18], [HOP, NODE20],\
 ]
 NODE_OPEN = NODE_CONNECT
 NODE_OPEN_AMOUNT = 0
@@ -130,7 +116,7 @@ thread_request = None
 loop_reqester = True
 
 funded_block_count = 0      # 全チャネルがnormal operationになったときのblockcount
-is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
+is_funding = FUNDING_NONE   # FUNDING_xxx
 
 pay_count = 0
 last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
@@ -338,9 +324,10 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            for lp in range(NODE_NUM / 2):
+            for lp in range(int(NODE_NUM / 2)):
+                print('  publish: ' + str(lp))
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[2*lp+1],
-                        '{"method":"invoice","params":[ 1000,"'+ node2label(2*lp)+'" ]}')
+                        '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[2*lp]+'" ]}')
             pay_count += 1
             time.sleep(PAY_INVOICE_ELAPSE)
         else:
@@ -354,7 +341,7 @@ def requester(client):
 
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2])
-    idx = label2id(json_msg['result'][2])
+    idx = label2node(json_msg['result'][2])
     client.publish(TOPIC_PREFIX + '/request/' + node_id[idx],
             '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
@@ -573,7 +560,7 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 2 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE20 HOP')
+        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE10 HOP')
         sys.exit()
     for i in range(NODE_NUM):
         if len(sys.argv[2 + i]) != 66:
@@ -589,7 +576,8 @@ if __name__ == '__main__':
     TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
     NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
     PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
-    PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+    PAY_START_BLOCK = config.getint(testname, 'PAY_START_BLOCK')
+    PAY_FAIL_BLOCK = config.getint(testname, 'PAY_FAIL_BLOCK')
 
     # 引数とnode_idの対応
     cnt = 0

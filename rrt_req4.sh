@@ -145,6 +145,7 @@ echo HOP:${NODE_SORT[2]}:${HOP}=   ${HOPID}
 echo NODE2:${NODE_SORT[3]}:${NODE2}= ${NODE2ID}
 echo NODE4:${NODE_SORT[4]}:${NODE4}= ${NODE4ID}
 
+echo python3 mqtt_req4.py ${TESTNAME} ${NODE1ID} ${NODE3ID} ${HOPID} ${NODE2ID} ${NODE4ID}
 nohup python3 mqtt_req4.py ${TESTNAME} ${NODE1ID} ${NODE3ID} ${HOPID} ${NODE2ID} ${NODE4ID} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}
