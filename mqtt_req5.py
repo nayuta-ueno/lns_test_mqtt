@@ -130,7 +130,7 @@ thread_request = None
 loop_reqester = True
 
 funded_block_count = 0      # 全チャネルがnormal operationになったときのblockcount
-is_funding = FUNDING_NONE   # 0:none, 1:connecting, 2:funding
+is_funding = FUNDING_NONE   # FUNDING_xxx
 
 pay_count = 0
 last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
@@ -338,9 +338,9 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            for lp in range(NODE_NUM / 2):
+            for lp in range(int(NODE_NUM / 2)):
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[2*lp+1],
-                        '{"method":"invoice","params":[ 1000,"'+ node2label(2*lp)+'" ]}')
+                        '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[2*lp]+'" ]}')
             pay_count += 1
             time.sleep(PAY_INVOICE_ELAPSE)
         else:
@@ -354,7 +354,7 @@ def requester(client):
 
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2])
-    idx = label2id(json_msg['result'][2])
+    idx = label2node(json_msg['result'][2])
     client.publish(TOPIC_PREFIX + '/request/' + node_id[idx],
             '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
@@ -487,6 +487,7 @@ def message_status(client, json_msg, msg, recv_id):
 
     if pay_count > 0:
         if recv_id in dict_status_node:
+            print('--------------------------')
             for stat in json_msg['status']:
                 #print('DBG:  stat ' + stat[0] + ':' + stat[1])
                 if stat[0] == 'Status.NORMAL':
@@ -499,6 +500,7 @@ def message_status(client, json_msg, msg, recv_id):
                             break
                     else:
                         continue
+            print('--------------------------')
     dict_status_node[recv_id] = json_msg
 
 
@@ -590,6 +592,8 @@ if __name__ == '__main__':
     NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
     PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
     PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+    PAY_START_BLOCK = config.getint(testname, 'PAY_START_BLOCK')
+    PAY_FAIL_BLOCK = config.getint(testname, 'PAY_FAIL_BLOCK')
 
     # 引数とnode_idの対応
     cnt = 0

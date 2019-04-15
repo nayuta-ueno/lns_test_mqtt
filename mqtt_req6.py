@@ -325,7 +325,6 @@ def requester(client):
             # request invoice
             log_print('[REQ]invoice')
             for lp in range(int(NODE_NUM / 2)):
-                print('  publish: ' + str(lp))
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[2*lp+1],
                         '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[2*lp]+'" ]}')
             pay_count += 1

@@ -1,8 +1,21 @@
 # mqtt_req1.py
 
-1. ptarminganがc-lightningにconnectする
-2. c-lightningがptarmiganにfundingする
-3. funding_lockedを待つ
-4. normal operationになったら、ptarmiganがinvoiceを発行し、c-lightningが支払う
-5. 5回送金を行ったら、ptarmiganがcloseする
-6. closeが終わったら、1に戻る
+```text
+node1---node2
+```
+
+* node1がfunderかつpayer
+* node2がfundeeかつpayee
+
+## 簡易実行
+
+* regtest
+  * 事前に`regtestkeepfee.sh`をバックグラウンドで動かしておくのが良い。
+* config.iniの編集
+  * `TOPIC_PREFIX`: MQTT topicのprefix
+  * `PORTBASE`: 使い始めるポート番号
+    * 1ノードで10個ずつインクリメントして使う
+
+```bash
+./rrt_req1.sh
+```

@@ -97,10 +97,10 @@ for i in ${NODE_TYPE[@]}; do
 		cd ../../..
 	fi
 	cnt=$((cnt+1))
+	create_kill_script
 done
 
 cd lns_test_mqtt
-create_kill_script
 
 sleep 10
 

@@ -78,9 +78,6 @@ python3 mqtt_req3.py <NODE1> <NODE3> <HOP> <NODE2>
   * `TOPIC_PREFIX`: MQTT topicのprefix
   * `PORTBASE`: 使い始めるポート番号
     * 1ノードで10個ずつインクリメントして使う
-* rrt_req3.shの編集
-  * `STARTGENERATOR`: `regtestkeepfee.sh`の起動有無
-    * 個人的には、`regtestkeepfee.sh`は手動で起動させたほうが良いと思う(複数テストを走らせる場合に忘れやすいので)
 
 ```bash
 ./rrt_req3.sh

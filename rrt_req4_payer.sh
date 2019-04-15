@@ -94,7 +94,7 @@ done
 
 # c-lightning fund
 for i in ${CLN[@]}; do
-	./rrt_cln_pay.sh ${i}
+	./rrt_cln_pay.sh ${i} 4
 done
 
 # generator
