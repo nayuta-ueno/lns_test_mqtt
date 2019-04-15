@@ -60,6 +60,7 @@ class PtarmBase(LnNode):
     '''
     def get_status(self, peer):
         local_msat = 0
+        response = ''
         try:
             jcmd = '{"method":"getinfo","params":[]}'
             response = self.socket_send(jcmd)
@@ -90,6 +91,7 @@ class PtarmBase(LnNode):
                 status = LnNode.Status.NONE
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('response=' + response)
             status = LnNode.Status.UNKNOWN
         return status, local_msat
 

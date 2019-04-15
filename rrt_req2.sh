@@ -13,6 +13,7 @@ read_ini() {
 	# ini setting
 	INI_FILE=config.ini
 	INI_SECTION=${TESTNAME}
+	PORTBASE=0
 
 	# ini parser
 	eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \

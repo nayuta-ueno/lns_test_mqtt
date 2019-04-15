@@ -69,35 +69,36 @@ PAY_FAIL_BLOCK = 10
 NODE_NUM = 21
 
 # node_id[]のインデックス
+#   偶数番n(payer)とn+1(payee)がセットになる
 NODE1=0
-NODE3=1
-NODE5=2
-NODE7=3
-NODE9=4
-NODE11=5
-NODE13=6
-NODE15=7
-NODE17=8
-NODE19=9
-HOP=10
-NODE2=11
-NODE4=12
-NODE6=13
-NODE8=14
-NODE10=15
-NODE12=16
-NODE14=17
-NODE16=18
-NODE18=19
-NODE20=20
+NODE2=1
+NODE3=2
+NODE4=3
+NODE5=4
+NODE6=5
+NODE7=6
+NODE8=7
+NODE9=8
+NODE10=9
+NODE11=10
+NODE12=11
+NODE13=12
+NODE14=13
+NODE15=14
+NODE16=15
+NODE17=16
+NODE18=17
+NODE19=18
+NODE20=19
+HOP=20
 
 # ログ用のラベル
 NODE_LABEL = [\
-    'node1', 'node3', 'node5', 'node7', 'node9',\
-    'node11', 'node13', 'node15', 'node17', 'node19',\
+    'node1', 'node2', 'node3', 'node4', 'node5',\
+    'node6', 'node7', 'node8', 'node9', 'node10',\
+    'node11', 'node12', 'node13', 'node14', 'node15',\
+    'node16', 'node17', 'node18', 'node19', 'node20',\
     'hop',\
-    'node2', 'node4', 'node6', 'node8', 'node10',\
-    'node12', 'node14', 'node16', 'node18', 'node20',\
 ]
 
 # [0]が[1]に向けてconnectする
@@ -337,16 +338,9 @@ def requester(client):
         if pay_count < PAY_COUNT_MAX:
             # request invoice
             log_print('[REQ]invoice')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE4], '{"method":"invoice","params":[ 2000,"node3" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE6], '{"method":"invoice","params":[ 1000,"node5" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE8], '{"method":"invoice","params":[ 2000,"node7" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE10], '{"method":"invoice","params":[ 1000,"node9" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE12], '{"method":"invoice","params":[ 2000,"node11" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE14], '{"method":"invoice","params":[ 1000,"node13" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE16], '{"method":"invoice","params":[ 2000,"node15" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE18], '{"method":"invoice","params":[ 1000,"node17" ]}')
-            client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE20], '{"method":"invoice","params":[ 2000,"node19" ]}')
+            for lp in range(NODE_NUM / 2):
+                client.publish(TOPIC_PREFIX + '/request/' + node_id[2*lp+1],
+                        '{"method":"invoice","params":[ 1000,"'+ node2label(2*lp)+'" ]}')
             pay_count += 1
             time.sleep(PAY_SEC)
         else:
@@ -360,12 +354,9 @@ def requester(client):
 
 def proc_invoice_got(client, json_msg, msg, recv_id):
     log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2])
-    if json_msg['result'][2] == 'node1':
-        client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE1],
-                '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
-    elif json_msg['result'][2] == 'node3':
-        client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE3],
-                '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
+    idx = label2id(json_msg['result'][2])
+    client.publish(TOPIC_PREFIX + '/request/' + node_id[idx],
+            '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
 #################################################################################
@@ -538,6 +529,10 @@ def node2label(id):
     return '???(' + id + ')'
 
 
+def label2node(label):
+    return NODE_LABEL.index(label)
+
+
 def json_node_connect():
     json_conn = []
     for lists in NODE_CONNECT:
@@ -578,7 +573,7 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 2 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE3 HOP NODE2 NODE4')
+        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE20 HOP')
         sys.exit()
     for i in range(NODE_NUM):
         if len(sys.argv[2 + i]) != 66:
@@ -597,11 +592,10 @@ if __name__ == '__main__':
     PAY_SEC = config.getint(testname, 'PAY_INVOICE_ELAPSE')
 
     # 引数とnode_idの対応
-    node_id[NODE1] = sys.argv[2]
-    node_id[NODE3] = sys.argv[3]
-    node_id[HOP] = sys.argv[4]
-    node_id[NODE2] = sys.argv[5]
-    node_id[NODE4] = sys.argv[6]
+    cnt = 0
+    for i in sys.argv[2:]:
+        node_id[cnt] = i
+        cnt += 1
 
     for num in range(NODE_NUM):
         print('  ' + NODE_LABEL[num] + '= ' + node_id[num])

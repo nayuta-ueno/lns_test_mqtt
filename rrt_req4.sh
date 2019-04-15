@@ -6,6 +6,7 @@ read_ini() {
 	# ini setting
 	INI_FILE=config.ini
 	INI_SECTION=${TESTNAME}
+	PORTBASE=0
 
 	# ini parser
 	eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
@@ -18,7 +19,7 @@ read_ini() {
 	echo ${PORTBASE}
 }
 
-mqtt_client_start() {
+get_nodeid() {
 	if [ "$1" == "clightning" ]; then
 		python3 clightning.py /tmp/light$2
 	elif [ "$1" == "ptarm" ]; then
@@ -131,11 +132,11 @@ echo !!!!!!!!!!!!!!!!!!
 echo !!! TEST START !!!
 echo !!!!!!!!!!!!!!!!!!
 
-NODE1ID=`mqtt_client_start ${NODE_SORT[0]} ${NODE1}`
-NODE3ID=`mqtt_client_start ${NODE_SORT[1]} ${NODE3}`
-HOPID=`mqtt_client_start ${NODE_SORT[2]} ${HOP}`
-NODE2ID=`mqtt_client_start ${NODE_SORT[3]} ${NODE2}`
-NODE4ID=`mqtt_client_start ${NODE_SORT[4]} ${NODE4}`
+NODE1ID=`get_nodeid ${NODE_SORT[0]} ${NODE1}`
+NODE3ID=`get_nodeid ${NODE_SORT[1]} ${NODE3}`
+HOPID=`get_nodeid ${NODE_SORT[2]} ${HOP}`
+NODE2ID=`get_nodeid ${NODE_SORT[3]} ${NODE2}`
+NODE4ID=`get_nodeid ${NODE_SORT[4]} ${NODE4}`
 
 echo TESTNAME= ${TESTNAME}
 echo NODE1:${NODE_SORT[0]}:${NODE1}= ${NODE1ID}
