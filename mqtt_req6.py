@@ -474,6 +474,7 @@ def message_status(client, json_msg, msg, recv_id):
 
     if pay_count > 0:
         if recv_id in dict_status_node:
+            print('--------------------------')
             for stat in json_msg['status']:
                 #print('DBG:  stat ' + stat[0] + ':' + stat[1])
                 if stat[0] == 'Status.NORMAL':
@@ -486,6 +487,7 @@ def message_status(client, json_msg, msg, recv_id):
                             break
                     else:
                         continue
+            print('--------------------------')
     dict_status_node[recv_id] = json_msg
 
 
@@ -576,6 +578,7 @@ if __name__ == '__main__':
     TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
     NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
     PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
+    PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
     PAY_START_BLOCK = config.getint(testname, 'PAY_START_BLOCK')
     PAY_FAIL_BLOCK = config.getint(testname, 'PAY_FAIL_BLOCK')
 

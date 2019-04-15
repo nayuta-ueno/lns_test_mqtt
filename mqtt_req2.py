@@ -69,7 +69,7 @@ NODE_OPEN_AMOUNT = 0
 PAY_COUNT_MAX = 0
 
 # 今のところ送金完了が分からないので、一定間隔で送金している
-PAY_SEC = 0
+PAY_INVOICE_ELAPSE = 0
 
 # global variable
 node_id = [''] * NODE_NUM
@@ -275,7 +275,7 @@ def requester(client):
             log_print('[REQ]invoice')
             client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE2], '{"method":"invoice","params":[ 1000,"node1" ]}')
             pay_count += 1
-            time.sleep(PAY_SEC)
+            time.sleep(PAY_INVOICE_ELAPSE)
         else:
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
@@ -475,7 +475,7 @@ if __name__ == '__main__':
     TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
     NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
     PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
-    PAY_SEC = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+    PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
 
     node_id[NODE1] = sys.argv[1]
     node_id[HOP] = sys.argv[2]
