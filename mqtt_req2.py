@@ -395,10 +395,6 @@ def message_status(client, json_msg, msg, recv_id):
     global dict_status_node
 
     dict_status_node[recv_id] = json_msg
-    if json_msg['status'] != 'Status.NORMAL':
-        pass
-        #print('STATUS[' + msg.topic + ']' + json_msg['status'])
-        #print('      json_msg=', json_msg, ' is_funding=', is_funding)
 
 
 def publish_stop(client):
