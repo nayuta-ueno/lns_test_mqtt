@@ -77,17 +77,17 @@ bitcoin-cli getblockcount
 
 ## テスト内容
 
-* [mqtt_req6.py](README_req6.md)
+* [mqtt_req6.py](docs/README_req6.md)
   * [payer]x5---[hop]---[payee]x5
-* [mqtt_req5.py](README_req5.md)
+* [mqtt_req5.py](docs/README_req5.md)
   * [payer]x10---[hop]---[payee]x10
-* [mqtt_req4.py](README_req4.md)
+* [mqtt_req4.py](docs/README_req4.md)
   * [payer]x2---[hop]---[payee]x2
-* [mqtt_req3.py](README_req3.md)
+* [mqtt_req3.py](docs/README_req3.md)
   * [payer]x2---[hop]---[payee]
-* [mqtt_req2.py](README_req2.md)
+* [mqtt_req2.py](docs/README_req2.md)
   * 2-hop payment
-* [mqtt_req1.py][README_req1.md]
+* [mqtt_req1.py](docs/README_req1.md)
   * direct payment
 
 ## 補足
