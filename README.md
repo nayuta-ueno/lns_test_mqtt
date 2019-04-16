@@ -94,3 +94,15 @@ bitcoin-cli getblockcount
 
 * MQTTを使っているので、テストが動いているかどうかはMQTTのsubscriberを使って監視するのが良いだろう
   * `lntest1`を使うように書いているので、一度に動かすとどれがどれかわからなくなるという問題があるので、topicでフィルタできるようにすべきか
+
+## 簡易エラー検出
+
+エラーが起きないテストの場合、エラーが起きたらチェックする。
+
+### c-lightningログ
+
+HTLCに関しては、しばしばEXPIRY_TOO_SOONが発生するようだった。
+
+```bash
+grep -n Removing cln* | grep -v FULFILLED | grep -v REMOTEFAIL | grep -v WIRE_FINAL_EXPIRY_TOO_SOON
+```
