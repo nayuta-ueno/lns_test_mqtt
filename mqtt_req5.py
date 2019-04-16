@@ -419,11 +419,14 @@ def stop_all(client, reason):
 def message_response(client, json_msg, msg, recv_id):
     global is_funding, pay_count, funded_block_count, last_fail_pay_count, fail_count, array_connected_node
 
+    recv_name = node2label(recv_id)
     ret = True
     reason = ''
-    if json_msg['result'][0] == 'connect':
-        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
-        if json_msg['result'][1] == 'OK':
+    res_command = json_msg['result'][0]
+    res_result = json_msg['result'][1]
+    if res_command == 'connect':
+        direction = recv_name + ' => ' + node2label(json_msg['result'][2])
+        if res_result == 'OK':
             log_print('connected: ' + direction)
             pair = (recv_id, json_msg['result'][2])
             if pair not in array_connected_node:
@@ -431,53 +434,62 @@ def message_response(client, json_msg, msg, recv_id):
                 if (len(array_connected_node) == len(NODE_CONNECT)) and (is_funding != FUNDING_WAIT):
                     open_all(client)
         else:
-            log_print('fail connect[' + json_msg['result'][1] + ']: ' + direction)
+            log_print('fail connect[' + res_result + ']: ' + direction)
             # ret = False   # close直後はありがちなので、スルー
             time.sleep(5)
 
-    elif json_msg['result'][0] == 'openchannel':
-        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
-        if json_msg['result'][1] == 'OK':
+    elif res_command == 'openchannel':
+        direction = recv_name + ' => ' + node2label(json_msg['result'][2])
+        if res_result == 'OK':
             log_print('funding start: ' + direction)
         else:
-            reason = 'funding fail[' + json_msg['result'][1] + ']: ' + direction
+            reason = 'funding fail[' + res_result + ']: ' + direction
             ret = False
 
-    elif json_msg['result'][0] == 'closechannel':
-        direction = node2label(recv_id) + ' => ' + node2label(json_msg['result'][2])
-        if json_msg['result'][1] == 'OK':
+    elif res_command == 'closechannel':
+        direction = recv_name + ' => ' + node2label(json_msg['result'][2])
+        if res_result == 'OK':
             log_print('closing start: ' + direction)
         else:
-            reason = 'closing fail[' + json_msg['result'][1] + ']: ' + direction
+            reason = 'closing fail[' + res_result + ']: ' + direction
             ret = False
 
-    elif json_msg['result'][0] == 'invoice':
-        if json_msg['result'][1] == 'NG':
+    elif res_command == 'invoice':
+        if res_result == 'NG':
             reason = 'fail invoice'
             ret = False
         else:
             proc_invoice_got(client, json_msg, msg, recv_id)
 
-    elif json_msg['result'][0] == 'pay':
-        if json_msg['result'][1] == 'OK':
-            log_print('pay start: ' + str(pay_count) + '(' + str(last_fail_pay_count) + ')' + ', fail_count=' + str(fail_count))
+    elif res_command == 'pay':
+        invoice = json_msg['result'][2]
+        if res_result == 'OK':
+            log_print('pay start: ' + str(pay_count) + \
+                '(' + str(last_fail_pay_count) + ')' + \
+                ', fail_count=' + str(fail_count) + \
+                ': ' + recv_name)
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 fail_count += 1
                 if last_fail_pay_count == pay_count:
-                    reason = 'pay fail: ' + json_msg['result'][1] + ', fail_count=' + str(fail_count)
+                    reason = 'pay fail twice: ' + \
+                        res_result + \
+                        ', fail_count=' + str(fail_count) + \
+                        ': ' + recv_name
                     ret = False
                 else:
-                    print('pay fail: last=' + str(last_fail_pay_count) + ' now=' + str(pay_count) + ', fail_count=' + str(fail_count))
+                    print('pay fail: last=' + str(last_fail_pay_count) + \
+                        ' now=' + str(pay_count) + \
+                        ', fail_count=' + str(fail_count))
                     last_fail_pay_count = pay_count
             else:
                 print('pay fail: through(' + str(blk - funded_block_count) + ')')
                 pay_count = 0
 
     if not ret:
-        log_print(reason)
+        errlog_print(reason)
         stop_all(client, reason)
 
 

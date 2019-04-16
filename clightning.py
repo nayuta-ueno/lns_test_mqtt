@@ -162,11 +162,11 @@ class CLightning(LnNode):
         try:
             res = self.lnrpc.pay(invoice, riskfactor=100)
             print('pay=', res)
-            res = '{"result": ["pay","OK"]}'
+            res = '{"result": ["pay","OK","' + invoice + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
-            print('fail pay')
-            res = '{"result": ["pay","NG"]}'
+            print('fail pay: ' + invoice)
+            res = '{"result": ["pay","NG","' + invoice + '"]}'
         return res
 
 

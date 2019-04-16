@@ -151,9 +151,10 @@ class PtarmBase(LnNode):
     def pay(self, invoice):
         res = self.socket_send('{"method":"routepay","params":["' + invoice + '",0]}')
         if 'error' not in res:
-            res = '{"result": ["pay","OK"]}'
+            res = '{"result": ["pay","OK","' + invoice + '"]}'
         else:
-            res = '{"result": ["pay","NG"]}'
+            print('fail pay: ' + invoice)
+            res = '{"result": ["pay","NG","' + invoice + '"]}'
         return res
 
     # result[1] = "OK" or "NG"
