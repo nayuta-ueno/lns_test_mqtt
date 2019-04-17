@@ -26,7 +26,7 @@ class LnNode(metaclass=ABCMeta):
 
     @abstractmethod
     def get_status(self, peer):
-        return Status.UNKNOWN, -1
+        return LnNode.Status.UNKNOWN, -1
 
     @abstractmethod
     def get_nodeid(self):
@@ -39,7 +39,7 @@ class LnNode(metaclass=ABCMeta):
 
     # result[1] = "OK" or "NG"
     @abstractmethod
-    def disconnect(self, node_id, ipaddr, port):
+    def disconnect(self, node_id):
         return '{"result": ["disconnect","NG","@@@"]}'
 
     # result[1] = "OK" or "NG"

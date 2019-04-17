@@ -89,14 +89,19 @@ def exec_request(client, json_msg):
         res = ln_node.pay(params[0])
     elif method == 'connect':
         res = ln_node.connect(params[0], params[1], params[2])
+    elif method == 'disconnect':
+        res = ln_node.disconnect(params[0])
     elif method == 'openchannel':
         if ln_node.get_status(params[0])[0] == LnNode.Status.NONE:
             res = ln_node.open_channel(params[0], params[1])
     elif method == 'closechannel':
         if ln_node.get_status(params[0])[0] == LnNode.Status.NORMAL:
             res = ln_node.close_mutual(params[0])
+    elif method == 'closechannel_force':
+        if ln_node.get_status(params[0])[0] == LnNode.Status.NORMAL:
+            res = ln_node.close_force(params[0])
     else:
-        print('method=', method)
+        print('unknown method=', method)
     if len(res) > 0:
         print('res=' + res)
         client.publish(TOPIC_PREFIX + '/response/' + node_id, res)

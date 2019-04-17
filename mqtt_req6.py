@@ -48,6 +48,7 @@ import configparser
 
 class PayCount:
     def __init__(self):
+        self.invoice_count = 0
         self.pay_count = 0
         self.last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
         self.fail_cont_count = 0         # failが連続した回数
@@ -77,7 +78,7 @@ PAY_FAIL_BLOCK = 10
 # 使うノード数
 NODE_NUM = 11
 
-# node_id[]のインデックス
+# array_node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
 NODE0 = 0
 NODE1 = 1
@@ -117,7 +118,7 @@ PAY_INVOICE_ELAPSE = 0
 FAIL_CONT_MAX = 3
 
 # global variable
-node_id = [''] * NODE_NUM
+array_node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
 dict_amount = dict()
@@ -157,7 +158,7 @@ def on_message(client, _, msg):
     ret, recv_id = proc_topic(client, msg)
     if not ret:
         if (len(recv_id) != 0) and msg.topic.startswith(TOPIC_PREFIX + '/notify/'):
-            print('yet: ' + node2label(recv_id))
+            print('yet: ' + nodeid2label(recv_id))
         return
 
     # payload
@@ -171,7 +172,7 @@ def notifier(client):
     while True:
         # notify
         conn_dict = {"connect": json_node_connect()}
-        for node in node_id:
+        for node in array_node_id:
             # print('notify: ' + node)
             client.publish(TOPIC_PREFIX + '/notify/' + node,
                            json.dumps(conn_dict))
@@ -205,7 +206,7 @@ def poll_time(client):
 
         # check health
         if len(dict_recv_node) < NODE_NUM:
-            reason = 'not all node found: ', str(dict_recv_node)
+            reason = 'not all node found: ' + str(dict_recv_node)
             stop_order = True
             break
         for node in dict_recv_node:
@@ -245,7 +246,7 @@ def proc_topic(client, msg):
             if msg.topic.rfind('/') != -1:
                 recv_id = msg.topic[msg.topic.rfind('/') + 1:]
                 for i in range(NODE_NUM):
-                    if node_id[i] == recv_id:
+                    if array_node_id[i] == recv_id:
                         mine = True
                         dict_recv_node[recv_id] = time.time()
                         break
@@ -290,7 +291,7 @@ def proc_status(client, msg, recv_id):
             # print('    proc_status-------------')
             for node in dict_status_node:
                 for status in dict_status_node[node]['status']:
-                    # print('    proc_status=' + status[0] + ': ' + node2label(status[1]))
+                    # print('    proc_status=' + status[0] + ': ' + nodeid2label(status[1]))
                     if status[0] != 'Status.NORMAL':
                         all_normal = False
                     if status[0] != 'Status.NONE':
@@ -340,19 +341,18 @@ def requester(client):
             continue
         pay_max_count = 0
         for lp in range(int(NODE_NUM / 2)):
-            payer = lp * 2
-            payee = payer + 1
-            node = node_id[payer]
-            if node not in dict_paycount:
-                dict_paycount[node] = PayCount()
-            pay_count = dict_paycount[node].pay_count
+            payer_idx = lp * 2
+            payee_idx = payer_idx + 1
+            payer_node = array_node_id[payer_idx]
+            if payer_node not in dict_paycount:
+                dict_paycount[payer_node] = PayCount()
+            pay_count = dict_paycount[payer_node].pay_count
             if pay_count < PAY_COUNT_MAX:
                 # request invoice
-                log_print('[REQ]invoice(' + NODE_LABEL[payer] + ')')
-                client.publish(TOPIC_PREFIX + '/request/' + node_id[payee],
+                log_print('[REQ]invoice(' + NODE_LABEL[payer_idx] + ')')
+                client.publish(TOPIC_PREFIX + '/request/' + array_node_id[payee_idx],
                                '{"method":"invoice",'
-                               '"params":[ 1000,"' + NODE_LABEL[payer]+'" ]}')
-                time.sleep(PAY_INVOICE_ELAPSE)
+                               '"params":[ 1000,"' + NODE_LABEL[payer_idx]+'" ]}')
             else:
                 pay_max_count += 1
         if pay_max_count == int(NODE_NUM / 2):
@@ -361,18 +361,26 @@ def requester(client):
             close_all(client)
             for pay_obj in dict_paycount.values():
                 pay_obj.pay_count = 0
+                pay_obj.invoice_count = 0
             break
+        else:
+            time.sleep(PAY_INVOICE_ELAPSE)
     print('exit requester')
 
 
 def proc_invoice_got(client, json_msg, msg, recv_id):
+    global dict_paycount
+
     invoice = json_msg['result'][1]
-    log_print('[RESPONSE]invoice-->[REQ]pay:' + json_msg['result'][2] +
+    target = json_msg['result'][2]
+    idx = label2idx(target)
+
+    dict_paycount[array_node_id[idx]].invoice_count += 1
+    log_print('[RESPONSE]invoice-->[REQ]pay:' + target +
               ': ' + invoice)
-    idx = label2node(json_msg['result'][2])
-    client.publish(TOPIC_PREFIX + '/request/' + node_id[idx],
+    client.publish(TOPIC_PREFIX + '/request/' + array_node_id[idx],
                    '{"method":"pay",'
-                   '"params":[ "' + json_msg['result'][1] + '" ]}')
+                   '"params":[ "' + invoice + '" ]}')
 
 
 ###############################################################################
@@ -383,13 +391,15 @@ def connect_all(client):
     if len(dict_status_node) != NODE_NUM:
         return
 
-    for node in NODE_CONNECT:
-        connector = node_id[node[0]]
-        connectee = node_id[node[1]]
+    for node_conn in NODE_CONNECT:
+        connector_idx = node_conn[0]
+        connectee_idx = node_conn[1]
+        connector = array_node_id[connector_idx]
+        connectee = array_node_id[connectee_idx]
         pair = (connector, connectee)
         if pair not in array_connected_node:
-            log_print('[REQ]connect: ' + NODE_LABEL[node[0]] +
-                      '=>' + NODE_LABEL[node[1]])
+            log_print('[REQ]connect: ' + NODE_LABEL[connector_idx] +
+                      '=>' + NODE_LABEL[connectee_idx])
             ipaddr = dict_status_node[connectee]['ipaddr']
             port = dict_status_node[connectee]['port']
             client.publish(TOPIC_PREFIX + '/request/' + connector,
@@ -402,11 +412,13 @@ def open_all(client):
     global is_funding
 
     log_print('open_all')
-    for node in NODE_OPEN:
-        opener = node_id[node[0]]
-        openee = node_id[node[1]]
-        print('[REQ]open: ' + NODE_LABEL[node[0]] +
-              ' => ' + NODE_LABEL[node[1]])
+    for node_open in NODE_OPEN:
+        opener_idx = node_open[0]
+        openee_idx = node_open[1]
+        opener = array_node_id[opener_idx]
+        openee = array_node_id[openee_idx]
+        print('[REQ]open: ' + NODE_LABEL[opener_idx] +
+              ' => ' + NODE_LABEL[openee_idx])
         client.publish(TOPIC_PREFIX + '/request/' + opener,
                        '{"method":"openchannel","params":[ "' + openee +
                        '", ' + str(NODE_OPEN_AMOUNT) + ' ]}')
@@ -417,11 +429,13 @@ def close_all(client):
     global is_funding, array_connected_node
 
     log_print('close_all')
-    for node in NODE_CONNECT:
-        closer = node_id[node[0]]
-        closee = node_id[node[1]]
-        print('[REQ]close: ' + NODE_LABEL[node[0]] +
-              '=>' + NODE_LABEL[node[1]])
+    for node_close in NODE_CONNECT:
+        closer_idx = node_close[0]
+        closee_idx = node_close[1]
+        closer = array_node_id[closer_idx]
+        closee = array_node_id[closee_idx]
+        print('[REQ]close: ' + NODE_LABEL[closer_idx] +
+              '=>' + NODE_LABEL[closee_idx])
         client.publish(TOPIC_PREFIX + '/request/' + closer,
                        '{"method":"closechannel",'
                        '"params":[ "' + closee + '" ]}')
@@ -430,7 +444,7 @@ def close_all(client):
 
 
 def stop_all(client, reason):
-    for node in node_id:
+    for node in array_node_id:
         print('stop: ' + node)
         client.publish(TOPIC_PREFIX + '/stop/' + node, reason)
     client.publish(TOPIC_PREFIX + '/stop/' + RANDNAME, reason)
@@ -441,16 +455,16 @@ def stop_all(client, reason):
 def message_response(client, json_msg, msg, recv_id):
     global is_funding, dict_paycount, funded_block_count, array_connected_node
 
-    recv_name = node2label(recv_id)
+    recv_name = nodeid2label(recv_id)
     ret = True
     reason = ''
     res_command = json_msg['result'][0]
     res_result = json_msg['result'][1]
     if res_command == 'connect':
         direction = recv_name +\
-                    ' => ' + node2label(json_msg['result'][2])
+                    ' => ' + nodeid2label(json_msg['result'][2])
         if res_result == 'OK':
-            log_print('connected: ' + direction)
+            log_print('[RESPONSE]connected: ' + direction)
             pair = (recv_id, json_msg['result'][2])
             if pair not in array_connected_node:
                 array_connected_node.append(pair)
@@ -463,18 +477,18 @@ def message_response(client, json_msg, msg, recv_id):
 
     elif res_command == 'openchannel':
         direction = recv_name +\
-                    ' => ' + node2label(json_msg['result'][2])
+                    ' => ' + nodeid2label(json_msg['result'][2])
         if res_result == 'OK':
-            log_print('funding start: ' + direction)
+            log_print('[RESPONSE]funding start: ' + direction)
         else:
             reason = 'funding fail[' + res_result + ']: ' + direction
             ret = False
 
     elif res_command == 'closechannel':
         direction = recv_name +\
-                    ' => ' + node2label(json_msg['result'][2])
+                    ' => ' + nodeid2label(json_msg['result'][2])
         if res_result == 'OK':
-            log_print('closing start: ' + direction)
+            log_print('[RESPONSE]closing start: ' + direction)
         else:
             reason = 'closing fail[' + res_result + ']: ' + direction
             ret = False
@@ -488,18 +502,23 @@ def message_response(client, json_msg, msg, recv_id):
 
     elif res_command == 'pay':
         invoice = json_msg['result'][2]
+        if recv_id not in dict_paycount:
+            dict_paycount[recv_id] = PayCount()
         pay_obj = dict_paycount[recv_id]
-        reason = '(' + recv_name +\
-            '): ' + res_result +\
-            ', pay_count=' + str(pay_obj.pay_count) +\
-            ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
-            ', fail_count=' + str(pay_obj.fail_count) +\
-            ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
-            ': ' + invoice
+
+        def pay_reason():
+            return '(' + recv_name +\
+                '): ' + res_result +\
+                ', invoice_count=' + str(pay_obj.invoice_count) +\
+                ', pay_count=' + str(pay_obj.pay_count) +\
+                ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
+                ', fail_count=' + str(pay_obj.fail_count) +\
+                ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
+                ': ' + invoice
 
         if res_result == 'OK':
-            log_print('pay start' + reason)
             pay_obj.pay_count += 1
+            log_print('[RESPONSE]pay ' + pay_reason())
             pay_obj.fail_cont_count = 0
             print(' pay_count=' + str(pay_obj.pay_count))
         else:
@@ -507,7 +526,7 @@ def message_response(client, json_msg, msg, recv_id):
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 pay_obj.fail_count += 1
-                reason = 'pay fail' + reason
+                reason = 'pay fail' + pay_reason()
                 print(reason)
                 if pay_obj.last_fail_pay_count == pay_obj.pay_count:
                     # 連続してNG
@@ -521,7 +540,7 @@ def message_response(client, json_msg, msg, recv_id):
                     pay_obj.last_fail_pay_count = pay_obj.pay_count
                     pay_obj.fail_cont_count = 0
             else:
-                print('pay through' + reason)
+                print('pay through' + pay_reason())
 
     if not ret:
         errlog_print(reason)
@@ -532,10 +551,12 @@ def message_response(client, json_msg, msg, recv_id):
 def message_status(client, json_msg, msg, recv_id):
     global dict_status_node
 
-    recv_name = node2label(recv_id)
+    recv_name = nodeid2label(recv_id)
     if recv_id not in dict_paycount:
         dict_paycount[recv_id] = PayCount()
-    print(recv_name + ':  pay_count=' + str(dict_paycount[recv_id].pay_count) +
+    print(recv_name + 
+          ':  invoice_count=' + str(dict_paycount[recv_id].invoice_count) +
+          ',  pay_count=' + str(dict_paycount[recv_id].pay_count) +
           ', last_fail_pay_count=' + str(dict_paycount[recv_id].last_fail_pay_count) +
           ', fail_cont_count=' + str(dict_paycount[recv_id].fail_cont_count) +
           ', fail_count=' + str(dict_paycount[recv_id].fail_count))
@@ -576,23 +597,23 @@ def errlog_print(msg):
     print('!!!!!!!!!!!!!!!!!!!!!')
 
 
-def node2label(id):
+def nodeid2label(id):
     num = 0
-    for node in node_id:
+    for node in array_node_id:
         if node == id:
             return NODE_LABEL[num]
         num += 1
     return '???(' + id + ')'
 
 
-def label2node(label):
+def label2idx(label):
     return NODE_LABEL.index(label)
 
 
 def json_node_connect():
     json_conn = []
     for lists in NODE_CONNECT:
-        pair = [node_id[lists[0]], node_id[lists[1]]]
+        pair = [array_node_id[lists[0]], array_node_id[lists[1]]]
         json_conn.append(pair)
     return json_conn
 
@@ -652,9 +673,9 @@ if __name__ == '__main__':
     # 引数とnode_idの対応
     cnt = 0
     for i in sys.argv[2:]:
-        node_id[cnt] = i
+        array_node_id[cnt] = i
         cnt += 1
 
     for num in range(NODE_NUM):
-        print('  ' + NODE_LABEL[num] + '= ' + node_id[num])
+        print('  ' + NODE_LABEL[num] + '= ' + array_node_id[num])
     main()

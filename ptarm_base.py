@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 import socket
-import sys
 import os
 import json
 import traceback
@@ -125,6 +124,7 @@ class PtarmBase(LnNode):
 
     # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
+        print('disconnect: ' + node_id)
         jcmd = '{"method":"disconnect","params":["' + node_id + ',"0.0.0.0",0"]}'
         print(jcmd)
         response = self.socket_send(jcmd)
@@ -179,7 +179,17 @@ class PtarmBase(LnNode):
 
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
-        res = self.socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
+        params = '["' + node_id + '","0.0.0.0",0]'
+        return self._close(node_id, params)
+
+    # result[1] = "OK" or "NG"
+    def close_force(self, node_id):
+        params = '["' + node_id + '","0.0.0.0",0,"force"]'
+        return self._close(node_id, params)
+
+    # result[1] = "OK" or "NG"
+    def _close(self, node_id, params):
+        res = self.socket_send('{"method":"close","params":' + params + '}')
         if 'error' not in res:
             res = '{"result": ["closechannel","OK","' + node_id + '"]}'
         else:

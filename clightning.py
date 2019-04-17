@@ -8,10 +8,11 @@ import os
 import json
 import traceback
 import signal
+import random
+import time
 
 from lnnode import LnNode
 from lightning import LightningRpc
-import random
 
 
 class CLightning(LnNode):
@@ -116,8 +117,9 @@ class CLightning(LnNode):
 
     # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
+        print('disconnect: ' + node_id)
         try:
-            res = self.lnrpc.disconnect(node_id)
+            res = self.lnrpc.disconnect(node_id, force=True)
             print('disconnect=', res)
             res = '{"result": ["disconnect","OK","' + node_id + '"]}'
         except:
@@ -164,8 +166,19 @@ class CLightning(LnNode):
 
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
+        print('close_mutual')
+        return self._close(node_id, False)
+
+    # result[1] = "OK" or "NG"
+    def close_force(self, node_id):
+        print('close_force')
+        self.disconnect(node_id)
+        return self._close(node_id, True)
+
+    # result[1] = "OK" or "NG"
+    def _close(self, node_id, force):
         try:
-            res = self.lnrpc.close(node_id)
+            res = self.lnrpc.close(node_id, force=force)
             print('close=', res)
             res = '{"result": ["closechannel","OK","' + node_id + '"]}'
         except:
