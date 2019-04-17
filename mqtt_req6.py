@@ -1,31 +1,31 @@
 # encoding: utf-8
 '''
-node1--+-hop-+-node2
+node0--+-hop-+-node1
        |     |
-node3--+     +-node4
+node2--+     +-node3
        |     |
        |     |
-node9--+     +-node10
+node8--+     +-node9
 
     while True:
-        [node1 => hop]connect
-        [node3 => hop]connect
+        [node0 => hop]connect
+        [node2 => hop]connect
         ...
-        [node9 => hop]connect
+        [node8 => hop]connect
         [hop => node2]connect
         [hop => node4]connect
         ...
         [hop => node10]connect
-        [node1 => hop]open_channel
-        [node3 => hop]open_channel
+        [node0 => hop]open_channel
+        [node2 => hop]open_channel
         [hop => node2]open_channel
         [hop => node4]open_channel
         ...
         for PAY_COUNT_MAX:
-            [node2]invoice
-            [node1]pay-node2
-            [node4]invoice
-            [node3]pay-node4
+            [node1]invoice
+            [node0]pay-node1
+            [node3]invoice
+            [node2]pay-node3
         close_all
         ...
 '''
@@ -46,6 +46,14 @@ import threading
 import configparser
 
 
+class PayCount:
+    def __init__(self):
+        self.pay_count = 0
+        self.last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
+        self.fail_cont_count = 0         # failが連続した回数
+        self.fail_count = 0
+
+
 config = configparser.ConfigParser()
 
 # MQTT
@@ -54,7 +62,8 @@ MQTT_PORT = 0
 TOPIC_PREFIX = ''
 
 # random requester name
-RANDNAME = ''.join([random.choice(string.ascii_letters + string.digits) for i in range(16)])
+RANDNAME = ''.join([random.choice(
+                    string.ascii_letters + string.digits) for i in range(16)])
 
 # const variable
 FUNDING_NONE = 0
@@ -70,30 +79,30 @@ NODE_NUM = 11
 
 # node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
-NODE1 = 0
-NODE2 = 1
-NODE3 = 2
-NODE4 = 3
-NODE5 = 4
-NODE6 = 5
-NODE7 = 6
-NODE8 = 7
-NODE9 = 8
-NODE10 = 9
+NODE0 = 0
+NODE1 = 1
+NODE2 = 2
+NODE3 = 3
+NODE4 = 4
+NODE5 = 5
+NODE6 = 6
+NODE7 = 7
+NODE8 = 8
+NODE9 = 9
 HOP = 10
 
 # ログ用のラベル
 NODE_LABEL = [\
-    'node1', 'node2', 'node3', 'node4', 'node5',\
-    'node6', 'node7', 'node8', 'node9', 'node10',\
-    'hop',\
+    'node0', 'node1', 'node2', 'node3', 'node4',\
+    'node5', 'node6', 'node7', 'node8', 'node9',\
+    'hop  ',\
 ]
 
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [\
-    [NODE1, HOP], [NODE3, HOP], [NODE5, HOP], [NODE7, HOP], [NODE9, HOP],\
-    [HOP, NODE2], [HOP, NODE4], [HOP, NODE6], [HOP, NODE8], [HOP, NODE10],\
+    [NODE0, HOP], [NODE2, HOP], [NODE4, HOP], [NODE6, HOP], [NODE8, HOP],\
+    [HOP, NODE1], [HOP, NODE3], [HOP, NODE5], [HOP, NODE7], [HOP, NODE9],\
 ]
 NODE_OPEN = NODE_CONNECT
 NODE_OPEN_AMOUNT = 0
@@ -112,6 +121,7 @@ node_id = [''] * NODE_NUM
 dict_recv_node = dict()
 dict_status_node = dict()
 dict_amount = dict()
+dict_paycount = dict()
 
 array_connected_node = []
 
@@ -120,11 +130,6 @@ loop_reqester = True
 
 funded_block_count = 0      # 全チャネルがnormal operationになったときのblockcount
 is_funding = FUNDING_NONE   # FUNDING_xxx
-
-pay_count = 0
-last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
-fail_cont_count = 0         # failが連続した回数
-fail_count = 0
 
 
 # MQTT: connect
@@ -143,7 +148,7 @@ def on_connect(client, user_data, flags, response_code):
 # MQTT: message subscribed
 def on_message(client, _, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester,\
-           is_funding, pay_count
+           is_funding
 
     # topic
     #   'request/' + node_id    : requester --> responser
@@ -325,7 +330,7 @@ def proc_status(client, msg, recv_id):
 
 # request check
 def requester(client):
-    global pay_count
+    global dict_paycount
 
     while loop_reqester:
         blk = getblockcount()
@@ -333,20 +338,28 @@ def requester(client):
             print('wait confirm: ' + str(blk - funded_block_count))
             time.sleep(10)
             continue
-        print('payed:' + str(pay_count))
-        if pay_count < PAY_COUNT_MAX:
-            # request invoice
-            log_print('[REQ]invoice')
-            for lp in range(int(NODE_NUM / 2)):
-                client.publish(TOPIC_PREFIX + '/request/' + node_id[2*lp+1],
-                        '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[2*lp]+'" ]}')
-            pay_count += 1
-            time.sleep(PAY_INVOICE_ELAPSE)
-        else:
+        pay_max_count = 0
+        for lp in range(int(NODE_NUM / 2)):
+            payer = lp * 2
+            payee = payer + 1
+            node = node_id[payer]
+            if node not in dict_paycount:
+                dict_paycount[node] = PayCount()
+            pay_count = dict_paycount[node].pay_count
+            if pay_count < PAY_COUNT_MAX:
+                # request invoice
+                log_print('[REQ]invoice(' + NODE_LABEL[payer] + ')')
+                client.publish(TOPIC_PREFIX + '/request/' + node_id[payee],
+                        '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[payer]+'" ]}')
+                time.sleep(PAY_INVOICE_ELAPSE)
+            else:
+                pay_max_count += 1
+        if pay_max_count == int(NODE_NUM / 2):
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
-            pay_count = 0
             close_all(client)
+            for pay_obj in dict_paycount.values():
+                pay_obj.pay_count = 0
             break
     print('exit requester')
 
@@ -360,7 +373,7 @@ def proc_invoice_got(client, json_msg, msg, recv_id):
             '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
 
 
-#################################################################################
+###############################################################################
 
 def connect_all(client):
     global is_funding, array_connected_node
@@ -424,8 +437,7 @@ def stop_all(client, reason):
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global is_funding, pay_count, funded_block_count, last_fail_pay_count,\
-           fail_count, array_connected_node, fail_cont_count
+    global is_funding, dict_paycount, funded_block_count, array_connected_node
 
     recv_name = node2label(recv_id)
     ret = True
@@ -474,39 +486,40 @@ def message_response(client, json_msg, msg, recv_id):
 
     elif res_command == 'pay':
         invoice = json_msg['result'][2]
+        pay_obj = dict_paycount[recv_id]
+        reason = '(' + recv_name +\
+            '): ' + res_result +\
+            ', pay_count=' + str(pay_obj.pay_count) +\
+            ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
+            ', fail_count=' + str(pay_obj.fail_count) +\
+            ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
+            ': ' + invoice
+
         if res_result == 'OK':
-            log_print('pay start(' + recv_name + '): ' + str(pay_count) +
-                      '(' + str(last_fail_pay_count) + ')' +
-                      ', fail_count=' + str(fail_count) + ': ' + invoice)
-            fail_cont_count = 0
+            log_print('pay start' + reason)
+            pay_obj.pay_count += 1
+            pay_obj.fail_cont_count = 0
+            print(' pay_count=' + str(pay_obj.pay_count))
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
-                fail_count += 1
-                if last_fail_pay_count == pay_count:
+                pay_obj.fail_count += 1
+                reason = 'pay fail' + reason
+                print(reason)
+                if pay_obj.last_fail_pay_count == pay_obj.pay_count:
                     # 連続してNG
-                    fail_cont_count += 1
-                    reason = 'pay fail(' + recv_name + '): ' + res_result +\
-                                ', fail_count=' + str(fail_count) +\
-                                ', fail_cont_count=' + str(fail_cont_count) +\
-                                ': ' + invoice
-                    if fail_cont_count >= FAIL_CONT_MAX:
+                    pay_obj.fail_cont_count += 1
+                    if pay_obj.fail_cont_count >= FAIL_CONT_MAX:
                         # 連続NG数が許容を超えた
                         errlog_print('too many failure')
                         ret = False
                 else:
                     # 単発NG
-                    print('pay fail(' + recv_name + '): last=' +
-                          str(last_fail_pay_count) +
-                          ' now=' + str(pay_count) + 
-                          ', fail_count=' + str(fail_count) + ': ' + invoice)
-                    last_fail_pay_count = pay_count
-                    fail_cont_count = 0
+                    pay_obj.last_fail_pay_count = pay_obj.pay_count
+                    pay_obj.fail_cont_count = 0
             else:
-                print('pay fail(' + recv_name + '): through'
-                      '(' + str(blk - funded_block_count) + '): ' + invoice)
-                pay_count = 0
+                print('pay through' + reason)
 
     if not ret:
         errlog_print(reason)
@@ -517,7 +530,14 @@ def message_response(client, json_msg, msg, recv_id):
 def message_status(client, json_msg, msg, recv_id):
     global dict_status_node
 
-    if pay_count > 0:
+    recv_name = node2label(recv_id)
+    if recv_id not in dict_paycount:
+        dict_paycount[recv_id] = PayCount()
+    print(recv_name + ':  pay_count=' + str(dict_paycount[recv_id].pay_count) +
+          ', last_fail_pay_count=' + str(dict_paycount[recv_id].last_fail_pay_count) +
+          ', fail_cont_count=' + str(dict_paycount[recv_id].fail_cont_count) +
+          ', fail_count=' + str(dict_paycount[recv_id].fail_count))
+    if dict_paycount[recv_id].pay_count > 0:
         if recv_id in dict_status_node:
             print('--------------------------')
             for stat in json_msg['status']:
@@ -607,7 +627,7 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 2 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE10 HOP')
+        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE0 NODE1 ... NODE9 HOP')
         sys.exit()
     for i in range(NODE_NUM):
         if len(sys.argv[2 + i]) != 66:

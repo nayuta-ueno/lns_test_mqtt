@@ -78,7 +78,7 @@ NODE2 = 3
 NODE4 = 4
 
 # ログ用のラベル
-NODE_LABEL = ['node1', 'node3', 'hop', 'node2', 'node4']
+NODE_LABEL = ['node1', 'node3', 'hop  ', 'node2', 'node4']
 
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
@@ -324,7 +324,6 @@ def requester(client):
             if node not in dict_paycount:
                 dict_paycount[node] = PayCount()
             pay_count = dict_paycount[node].pay_count
-            print('payed:' + str(pay_count))
             if pay_count < PAY_COUNT_MAX:
                 # request invoice
                 log_print('[REQ]invoice(node2)')
@@ -340,7 +339,7 @@ def requester(client):
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
             close_all(client)
-            for pay_obj in dict_paycount:
+            for pay_obj in dict_paycount.values():
                 pay_obj.pay_count = 0
             break
     print('exit requester')
@@ -473,25 +472,27 @@ def message_response(client, json_msg, msg, recv_id):
     elif res_command == 'pay':
         invoice = json_msg['result'][2]
         pay_obj = dict_paycount[recv_id]
-        reason = recv_name +\
+        reason = '(' + recv_name +\
             '): ' + res_result +\
-            'pay_count=' + str(pay_obj.pay_count) +\
+            ', pay_count=' + str(pay_obj.pay_count) +\
             ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
             ', fail_count=' + str(pay_obj.fail_count) +\
             ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
             ': ' + invoice
 
         if res_result == 'OK':
-            log_print('pay start(' + reason)
+            log_print('pay start' + reason)
             pay_obj.pay_count += 1
             pay_obj.fail_cont_count = 0
+            print(' pay_count=' + str(pay_obj.pay_count))
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 pay_obj.fail_count += 1
-                print('pay fail(' + reason)
-                if pay_obj.last_fail_pay_count == pay_count:
+                reason = 'pay fail' + reason
+                print(reason)
+                if pay_obj.last_fail_pay_count == pay_obj.pay_count:
                     # 連続してNG
                     pay_obj.fail_cont_count += 1
                     if pay_obj.fail_cont_count >= FAIL_CONT_MAX:
@@ -503,7 +504,7 @@ def message_response(client, json_msg, msg, recv_id):
                     pay_obj.last_fail_pay_count = pay_obj.pay_count
                     pay_obj.fail_cont_count = 0
             else:
-                print('pay through(' + reason)
+                print('pay through' + reason)
 
     if not ret:
         errlog_print(reason)
