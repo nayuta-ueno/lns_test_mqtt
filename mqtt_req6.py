@@ -104,6 +104,9 @@ PAY_COUNT_MAX = 0
 # 今のところ送金完了が分からないので、一定間隔で送金している
 PAY_INVOICE_ELAPSE = 0
 
+# 送信失敗が連続してテストを終了するカウント
+FAIL_CONT_MAX = 3
+
 # global variable
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
@@ -120,6 +123,7 @@ is_funding = FUNDING_NONE   # FUNDING_xxx
 
 pay_count = 0
 last_fail_pay_count = -1    # 前回payでNGが返ってきたときのpay_count
+fail_cont_count = 0         # failが連続した回数
 fail_count = 0
 
 
@@ -421,7 +425,7 @@ def stop_all(client, reason):
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
     global is_funding, pay_count, funded_block_count, last_fail_pay_count,\
-           fail_count, array_connected_node
+           fail_count, array_connected_node, fail_cont_count
 
     recv_name = node2label(recv_id)
     ret = True
@@ -474,22 +478,31 @@ def message_response(client, json_msg, msg, recv_id):
             log_print('pay start(' + recv_name + '): ' + str(pay_count) +
                       '(' + str(last_fail_pay_count) + ')' +
                       ', fail_count=' + str(fail_count) + ': ' + invoice)
+            fail_cont_count = 0
         else:
             blk = getblockcount()
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 fail_count += 1
                 if last_fail_pay_count == pay_count:
-                    reason = 'pay fail twice(' + recv_name + '): ' + res_result +\
+                    # 連続してNG
+                    fail_cont_count += 1
+                    reason = 'pay fail(' + recv_name + '): ' + res_result +\
                                 ', fail_count=' + str(fail_count) +\
+                                ', fail_cont_count=' + str(fail_cont_count) +\
                                 ': ' + invoice
-                    ret = False
+                    if fail_cont_count >= FAIL_CONT_MAX:
+                        # 連続NG数が許容を超えた
+                        errlog_print('too many failure')
+                        ret = False
                 else:
+                    # 単発NG
                     print('pay fail(' + recv_name + '): last=' +
                           str(last_fail_pay_count) +
                           ' now=' + str(pay_count) + 
                           ', fail_count=' + str(fail_count) + ': ' + invoice)
                     last_fail_pay_count = pay_count
+                    fail_cont_count = 0
             else:
                 print('pay fail(' + recv_name + '): through'
                       '(' + str(blk - funded_block_count) + '): ' + invoice)

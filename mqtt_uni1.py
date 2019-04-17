@@ -1,31 +1,14 @@
 # encoding: utf-8
 '''
-node1--+-hop-+-node2
-       |     |
-node3--+     +-node4
-       |     |
-       |     |
-node19-+     +-node20
+node1---node2
 
     while True:
-        [node1 => hop]connect
-        [node3 => hop]connect
-        ...
-        [node19 => hop]connect
-        [hop => node2]connect
-        [hop => node4]connect
-        ...
-        [hop => node20]connect
-        [node1 => hop]open_channel
-        [node3 => hop]open_channel
-        [hop => node2]open_channel
-        [hop => node4]open_channel
+        [node1 => node2]connect
+        [node1 => node2]open_channel
         ...
         for PAY_COUNT_MAX:
             [node2]invoice
             [node1]pay-node2
-            [node4]invoice
-            [node3]pay-node4
         close_all
         ...
 '''
@@ -66,48 +49,22 @@ PAY_START_BLOCK = 8
 PAY_FAIL_BLOCK = 10
 
 # 使うノード数
-NODE_NUM = 21
+NODE_NUM = 2
 
 # node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
 NODE1 = 0
 NODE2 = 1
-NODE3 = 2
-NODE4 = 3
-NODE5 = 4
-NODE6 = 5
-NODE7 = 6
-NODE8 = 7
-NODE9 = 8
-NODE10 = 9
-NODE11 = 10
-NODE12 = 11
-NODE13 = 12
-NODE14 = 13
-NODE15 = 14
-NODE16 = 15
-NODE17 = 16
-NODE18 = 17
-NODE19 = 18
-NODE20 = 19
-HOP = 20
 
 # ログ用のラベル
 NODE_LABEL = [\
-    'node1', 'node2', 'node3', 'node4', 'node5',\
-    'node6', 'node7', 'node8', 'node9', 'node10',\
-    'node11', 'node12', 'node13', 'node14', 'node15',\
-    'node16', 'node17', 'node18', 'node19', 'node20',\
-    'hop',\
+    'node1', 'node2'
 ]
 
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
 NODE_CONNECT = [\
-    [NODE1, HOP], [NODE3, HOP], [NODE5, HOP], [NODE7, HOP], [NODE9, HOP],\
-    [NODE11, HOP], [NODE13, HOP], [NODE15, HOP], [NODE17, HOP], [NODE19, HOP],\
-    [HOP, NODE2], [HOP, NODE4], [HOP, NODE6], [HOP, NODE8], [HOP, NODE10],\
-    [HOP, NODE12], [HOP, NODE14], [HOP, NODE16], [HOP, NODE18], [HOP, NODE20],\
+    [NODE1, NODE2]
 ]
 NODE_OPEN = NODE_CONNECT
 NODE_OPEN_AMOUNT = 0
@@ -621,7 +578,7 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) != 2 + NODE_NUM:
-        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE20 HOP')
+        print('usage: ' + sys.argv[0] + ' INI_SECTION NODE1 NODE2 ... NODE10 HOP')
         sys.exit()
     for i in range(NODE_NUM):
         if len(sys.argv[2 + i]) != 66:
