@@ -11,13 +11,15 @@ from ptarm_base import PtarmBase
 
 
 class PtarmJ(PtarmBase):
+    def __init__(self):
+        super().__init__()
+
     def get_open_command(self, node_id, amount):
         ipaddr_dummy = '"0.0.0.0",0'
         txid = "0000000000000000000000000000000000000000000000000000000000000000"
         txindex = 0
         cmd = '{"method":"fund","params":["' + node_id + '",' + ipaddr_dummy + ',' + txid + ',' + str(txindex) + ',' + str(amount) + ',0,0,0 ]}'
         return cmd
-
 
     def get_name(self):
         return 'PtarmJ'

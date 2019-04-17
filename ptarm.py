@@ -11,6 +11,9 @@ from ptarm_base import PtarmBase
 
 
 class Ptarm(PtarmBase):
+    def __init__(self):
+        super().__init__()
+
     def get_open_command(self, node_id, amount):
         fconf = self.linux_cmd_exec('./pay_fundin.py ' + str(amount) + ' 0 ""')
         if fconf is None:
@@ -25,7 +28,6 @@ class Ptarm(PtarmBase):
         # peer_node_id, peer_addr, peer_port, txid, txindex, funding_sat, push_sat, feerate_per_kw, is_private
         cmd = '{"method":"fund","params":["' + node_id + '",' + ipaddr_dummy + ',' + fconf + ',0 ]}'
         return cmd
-
 
     def get_name(self):
         return 'Ptarm'

@@ -15,21 +15,20 @@ import random
 
 
 class CLightning(LnNode):
-    lnrpc = ''
-    rpc_file = '/tmp/lightningrpc'
-
+    def __init__(self):
+        super().__init__()
+        self.lnrpc = ''
+        self.rpc_file = '/tmp/lightningrpc'
 
     def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
         self.ipaddr = ipaddr
         self.port = port
-        if argv != None:
+        if argv is not None:
             self.rpc_file = argv
         self.lnrpc = LightningRpc(self.rpc_file)
 
-
     def get_name(self):
         return 'c-lightning'
-
 
     '''
     enum channel_state {
@@ -82,10 +81,10 @@ class CLightning(LnNode):
             elif peer_status == 'CHANNELD_AWAITING_LOCKIN':
                 status = LnNode.Status.FUNDING
             elif peer_status == 'CHANNELD_SHUTTING_DOWN' or\
-                peer_status == 'CLOSINGD_SIGEXCHANGE' or\
-                peer_status == 'CLOSINGD_COMPLETE' or\
-                peer_status == 'AWAITING_UNILATERAL' or\
-                peer_status == 'FUNDING_SPEND_SEEN':
+                    peer_status == 'CLOSINGD_SIGEXCHANGE' or\
+                    peer_status == 'CLOSINGD_COMPLETE' or\
+                    peer_status == 'AWAITING_UNILATERAL' or\
+                    peer_status == 'FUNDING_SPEND_SEEN':
                 status = LnNode.Status.CLOSING
             else:
                 status = LnNode.Status.NONE
@@ -93,7 +92,6 @@ class CLightning(LnNode):
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             os.kill(os.getpid(), signal.SIGKILL)
         return status, channel_sat
-
 
     def get_nodeid(self):
         node = ''
@@ -103,7 +101,6 @@ class CLightning(LnNode):
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             os.kill(os.getpid(), signal.SIGKILL)
-
 
     # result[1] = "OK" or "NG"
     def connect(self, node_id, ipaddr, port):
@@ -117,7 +114,6 @@ class CLightning(LnNode):
             res = '{"result": ["connect","NG","' + node_id + '"]}'
         return res
 
-
     # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
         try:
@@ -129,7 +125,6 @@ class CLightning(LnNode):
             print('fail disconnect')
             res = '{"result": ["disconnect","NG","' + node_id + '"]}'
         return res
-
 
     # result[1] = "OK" or "NG"
     def open_channel(self, node_id, amount):
@@ -143,7 +138,6 @@ class CLightning(LnNode):
             res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
 
-
     # result[1] = BOLT11 or "NG"
     def get_invoice(self, amount_msat, label=''):
         try:
@@ -156,7 +150,6 @@ class CLightning(LnNode):
             res = '{"result": ["invoice","NG","' + label + '"]}'
         return res
 
-
     # result[1] = "OK" or "NG"
     def pay(self, invoice):
         try:
@@ -168,7 +161,6 @@ class CLightning(LnNode):
             print('fail pay: ' + invoice)
             res = '{"result": ["pay","NG","' + invoice + '"]}'
         return res
-
 
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):

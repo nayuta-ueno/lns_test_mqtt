@@ -14,10 +14,12 @@ from lnnode import LnNode
 
 PORT_PTARM = 9735
 
-class PtarmBase(LnNode):
-    rpc_addr = 'localhost'
-    rpc_port = PORT_PTARM + 1
 
+class PtarmBase(LnNode):
+    def __init__(self):
+        super().__init__()
+        self.rpc_addr = 'localhost'
+        self.rpc_port = PORT_PTARM + 1
 
     def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
         self.ipaddr = ipaddr
@@ -82,10 +84,10 @@ class PtarmBase(LnNode):
             elif peer_status == 'establishing':
                 status = LnNode.Status.FUNDING
             elif peer_status == 'close waiting' or\
-                peer_status == 'mutual close' or\
-                peer_status == 'unilateral close(local)' or\
-                peer_status == 'unilateral close(remote)' or\
-                peer_status == 'revoked transaction close':
+                    peer_status == 'mutual close' or\
+                    peer_status == 'unilateral close(local)' or\
+                    peer_status == 'unilateral close(remote)' or\
+                    peer_status == 'revoked transaction close':
                 status = LnNode.Status.CLOSING
             else:
                 status = LnNode.Status.NONE
@@ -94,7 +96,6 @@ class PtarmBase(LnNode):
             print('response=' + response)
             status = LnNode.Status.UNKNOWN
         return status, local_msat
-
 
     def get_nodeid(self):
         try:
@@ -106,7 +107,6 @@ class PtarmBase(LnNode):
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             os.kill(os.getpid(), signal.SIGKILL)
 
-
     # result[1] = "OK" or "NG"
     def connect(self, node_id, ipaddr, port):
         jcmd = '{"method":"connect","params":["' + node_id + '","' + ipaddr + '",' + str(port) + ']}'
@@ -117,12 +117,11 @@ class PtarmBase(LnNode):
         if ('result' in jrpc) and (jrpc['result'] == 'OK'):
             res = '{"result": ["connect","OK","' + node_id + '"]}'
         elif ('error' in jrpc) and (jrpc['error']['code'] == -10002):
-            #already connected
+            # already connected
             res = '{"result": ["connect","OK","' + node_id + '"]}'
         else:
             res = '{"result": ["connect","NG","' + node_id + '"]}'
         return res
-
 
     # result[1] = "OK" or "NG"
     def disconnect(self, node_id):
@@ -136,7 +135,6 @@ class PtarmBase(LnNode):
             res = '{"result": ["disconnect","NG","' + node_id + '"]}'
         return res
 
-
     # result[1] = BOLT11 or "NG"
     def get_invoice(self, amount_msat, label=''):
         res = self.socket_send('{"method":"invoice","params":[ ' + str(amount_msat) + ',0 ]}')
@@ -145,7 +143,6 @@ class PtarmBase(LnNode):
         else:
             res = '{"result": ["invoice","NG"]}'
         return res
-
 
     # result[1] = "OK" or "NG"
     def pay(self, invoice):
@@ -160,7 +157,7 @@ class PtarmBase(LnNode):
     # result[1] = "OK" or "NG"
     def open_channel(self, node_id, amount):
         res = ''
-        time.sleep(3)       #wait init exchange
+        time.sleep(3)       # wait init exchange
 
         cmd = self.get_open_command(node_id, amount)
         print('cmd=' + cmd)
@@ -180,7 +177,6 @@ class PtarmBase(LnNode):
             res = '{"result": ["openchannel","NG","' + node_id + '"]}'
         return res
 
-
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
         res = self.socket_send('{"method":"close","params":["' + node_id + '","0.0.0.0",0]}')
@@ -189,7 +185,6 @@ class PtarmBase(LnNode):
         else:
             res = '{"result": ["closechannel","NG","' + node_id + '"]}'
         return res
-
 
     def socket_send(self, req):
         response = ''
@@ -204,7 +199,6 @@ class PtarmBase(LnNode):
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             os.kill(os.getpid(), signal.SIGKILL)
         return response
-
 
     def linux_cmd_exec(self, cmd):
         print('cmd:', cmd.split(' '))
