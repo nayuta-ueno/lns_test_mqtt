@@ -54,12 +54,12 @@ CLN_NUM=0
 
 port=$((PORTBASE))
 NODE_PORT+=(${port})
-NODE_TYPE+=(ptarm)
+NODE_TYPE+=(clightning)
+CLN_NUM=$((CLN_NUM+1))
 
 port=$((PORTBASE+2))
 NODE_PORT+=(${port})
-NODE_TYPE+=(clightning)
-CLN_NUM=$((CLN_NUM+1))
+NODE_TYPE+=(ptarm)
 
 ####################
 
@@ -173,8 +173,8 @@ for i in ${NODE_TYPE[@]}; do
 done
 
 echo python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
-python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
-#nohup python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
+#python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
+nohup python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}
 
