@@ -128,7 +128,7 @@ def on_connect(client, user_data, flags, response_code):
 # MQTT: message subscribed
 def on_message(client, _, msg):
     global dict_recv_node, dict_status_node, thread_request, loop_reqester,\
-           is_funding, pay_count
+           is_funding
 
     # topic
     #   'request/' + node_id    : requester --> responser
@@ -310,7 +310,7 @@ def proc_status(client, msg, recv_id):
 
 # request check
 def requester(client):
-    global pay_count
+    global dict_paycount
 
     while loop_reqester:
         blk = getblockcount()
@@ -329,18 +329,19 @@ def requester(client):
                 # request invoice
                 log_print('[REQ]invoice(node2)')
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE2],
-                            '{"method":"invoice","params":[ 1000,"node1" ]}')
+                               '{"method":"invoice","params":[ 1000,"node1" ]}')
                 log_print('[REQ]invoice(node4)')
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE4],
-                            '{"method":"invoice","params":[ 2000,"node3" ]}')
+                               '{"method":"invoice","params":[ 2000,"node3" ]}')
                 time.sleep(PAY_INVOICE_ELAPSE)
             else:
                 pay_max_count += 1
         if pay_max_count == len(NODE_PAYER):
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
-            pay_count = 0
             close_all(client)
+            for pay_obj in dict_paycount:
+                pay_obj.pay_count = 0
             break
     print('exit requester')
 
@@ -422,8 +423,7 @@ def stop_all(client, reason):
 
 # message: topic="response/#"
 def message_response(client, json_msg, msg, recv_id):
-    global is_funding, pay_count, funded_block_count, last_fail_pay_count,\
-           fail_count, array_connected_node, fail_cont_count
+    global is_funding, dict_paycount, funded_block_count, array_connected_node
 
     recv_name = node2label(recv_id)
     ret = True
@@ -473,12 +473,16 @@ def message_response(client, json_msg, msg, recv_id):
     elif res_command == 'pay':
         invoice = json_msg['result'][2]
         pay_obj = dict_paycount[recv_id]
+        reason = recv_name +\
+            '): ' + res_result +\
+            'pay_count=' + str(pay_obj.pay_count) +\
+            ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
+            ', fail_count=' + str(pay_obj.fail_count) +\
+            ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
+            ': ' + invoice
+
         if res_result == 'OK':
-            log_print('pay start(' + recv_name + '): '
-                      'pay_count=' + str(pay_obj.pay_count) +
-                      ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +
-                      ', fail_count=' + str(pay_obj.fail_count) +
-                      ': ' + invoice)
+            log_print('pay start(' + reason)
             pay_obj.pay_count += 1
             pay_obj.fail_cont_count = 0
         else:
@@ -486,30 +490,20 @@ def message_response(client, json_msg, msg, recv_id):
             # announcementは 6 confirm以降で展開なので、少し余裕を持たせる
             if blk - funded_block_count > PAY_FAIL_BLOCK:
                 pay_obj.fail_count += 1
+                print('pay fail(' + reason)
                 if pay_obj.last_fail_pay_count == pay_count:
                     # 連続してNG
                     pay_obj.fail_cont_count += 1
-                    reason = 'pay fail(' + recv_name + '): ' + res_result +\
-                                'pay_count=' + str(pay_obj.pay_count) +\
-                                ', last_fail_pay_count=' + str(pay_obj.last_fail_pay_count) +\
-                                ', fail_count=' + str(pay_obj.fail_count) +\
-                                ', fail_cont_count=' + str(pay_obj.fail_cont_count) +\
-                                ': ' + invoice
                     if pay_obj.fail_cont_count >= FAIL_CONT_MAX:
                         # 連続NG数が許容を超えた
                         errlog_print('too many failure')
                         ret = False
                 else:
                     # 単発NG
-                    print('pay fail(' + recv_name + '): last=' +
-                          str(pay_obj.last_fail_pay_count) +
-                          ' now=' + str(pay_obj.pay_count) + 
-                          ', fail_count=' + str(pay_obj.fail_count) + ': ' + invoice)
                     pay_obj.last_fail_pay_count = pay_obj.pay_count
                     pay_obj.fail_cont_count = 0
             else:
-                print('pay fail(' + recv_name + '): through'
-                      '(' + str(blk - funded_block_count) + '): ' + invoice)
+                print('pay through(' + reason)
 
     if not ret:
         errlog_print(reason)
@@ -520,8 +514,13 @@ def message_response(client, json_msg, msg, recv_id):
 def message_status(client, json_msg, msg, recv_id):
     global dict_status_node
 
+    recv_name = node2label(recv_id)
     if recv_id not in dict_paycount:
         dict_paycount[recv_id] = PayCount()
+    print(recv_name + ':  pay_count=' + str(dict_paycount[recv_id].pay_count) +
+          ', last_fail_pay_count=' + str(dict_paycount[recv_id].last_fail_pay_count) +
+          ', fail_cont_count=' + str(dict_paycount[recv_id].fail_cont_count) +
+          ', fail_count=' + str(dict_paycount[recv_id].fail_count))
     if dict_paycount[recv_id].pay_count > 0:
         if recv_id in dict_status_node:
             print('--------------------------')
