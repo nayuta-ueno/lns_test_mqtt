@@ -92,17 +92,17 @@ NODE9 = 9
 HOP = 10
 
 # ログ用のラベル
-NODE_LABEL = [\
-    'node0', 'node1', 'node2', 'node3', 'node4',\
-    'node5', 'node6', 'node7', 'node8', 'node9',\
-    'hop  ',\
+NODE_LABEL = [
+    'node0', 'node1', 'node2', 'node3', 'node4',
+    'node5', 'node6', 'node7', 'node8', 'node9',
+    'hop  ',
 ]
 
 # [0]が[1]に向けてconnectする
 # close_all()も同じ方向でcloseする
-NODE_CONNECT = [\
-    [NODE0, HOP], [NODE2, HOP], [NODE4, HOP], [NODE6, HOP], [NODE8, HOP],\
-    [HOP, NODE1], [HOP, NODE3], [HOP, NODE5], [HOP, NODE7], [HOP, NODE9],\
+NODE_CONNECT = [
+    [NODE0, HOP], [NODE2, HOP], [NODE4, HOP], [NODE6, HOP], [NODE8, HOP],
+    [HOP, NODE1], [HOP, NODE3], [HOP, NODE5], [HOP, NODE7], [HOP, NODE9],
 ]
 NODE_OPEN = NODE_CONNECT
 NODE_OPEN_AMOUNT = 0
@@ -262,7 +262,7 @@ def proc_topic(client, msg):
 def proc_payload(client, msg, recv_id):
     payload = ''
     try:
-        #payload
+        # payload
         payload = str(msg.payload, 'utf-8')
         if len(payload) == 0:
             return
@@ -350,7 +350,8 @@ def requester(client):
                 # request invoice
                 log_print('[REQ]invoice(' + NODE_LABEL[payer] + ')')
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[payee],
-                        '{"method":"invoice","params":[ 1000,"'+ NODE_LABEL[payer]+'" ]}')
+                               '{"method":"invoice",'
+                               '"params":[ 1000,"' + NODE_LABEL[payer]+'" ]}')
                 time.sleep(PAY_INVOICE_ELAPSE)
             else:
                 pay_max_count += 1
@@ -370,7 +371,8 @@ def proc_invoice_got(client, json_msg, msg, recv_id):
               ': ' + invoice)
     idx = label2node(json_msg['result'][2])
     client.publish(TOPIC_PREFIX + '/request/' + node_id[idx],
-            '{"method":"pay","params":[ "' + json_msg['result'][1] + '" ]}')
+                   '{"method":"pay",'
+                   '"params":[ "' + json_msg['result'][1] + '" ]}')
 
 
 ###############################################################################
