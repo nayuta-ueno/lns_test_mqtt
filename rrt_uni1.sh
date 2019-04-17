@@ -173,8 +173,8 @@ for i in ${NODE_TYPE[@]}; do
 done
 
 echo python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
-python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
-#nohup python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
+#python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]}
+nohup python3 mqtt_uni1.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}
 
