@@ -41,7 +41,7 @@ sudo pip3 install pylightning paho-mqtt
 #c-lightning
 git clone https://github.com/ElementsProject/lightning.git
 cd lightning
-./configure
+./configure --enable-developer
 make
 
 cd ..

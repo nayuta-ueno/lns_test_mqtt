@@ -11,20 +11,26 @@ import signal
 from lnnode import LnNode
 
 
-PORT_PTARM = 9735
-
-
 class PtarmBase(LnNode):
     def __init__(self):
         super().__init__()
         self.rpc_addr = 'localhost'
-        self.rpc_port = PORT_PTARM + 1
+        self.rpc_port = 9735 + 1
+        self.auto_reconnect = True
 
     def setup(self, ipaddr='127.0.0.1', port=9735, argv=None):
         self.ipaddr = ipaddr
         self.port = port
         self.rpc_port = port + 1
+        self.disable_auto_reconnect()
         pass
+
+    def disable_auto_reconnect(self):
+        if self.auto_reconnect:
+            jcmd = '{"method":"debug","params":[ 8 ]}'
+            self.socket_send(jcmd)
+            self.auto_reconnect = False
+
 
     '''
     switch (pChannel->status) {
