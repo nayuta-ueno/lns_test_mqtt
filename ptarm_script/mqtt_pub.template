@@ -34,7 +34,7 @@ if __name__ == '__main__':
         print('usage: ' + sys.argv[0] + ' <message> <node_id>')
         sys.exit()
 
-    config.read('./config.ini')
+    config.read('./script/config.ini')
     testname = '<TESTNAME>'
     print('testname= ' + testname)
 
@@ -49,5 +49,5 @@ if __name__ == '__main__':
 
 
     message = sys.argv[1]
-    topic = testname + '/' + 'message' + sys.argv[2]
+    topic = TOPIC_PREFIX + '/message/' + sys.argv[2]
     main()

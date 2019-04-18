@@ -427,7 +427,7 @@ def close_all(client):
               '=>' + NODE_LABEL[closee_idx])
         client.publish(TOPIC_PREFIX + '/request/' + closer,
                        '{"method":"closechannel",'
-                       '"params":[ "' + closee + '" ]}')
+                       '"params":["' + closee + '","mutual"]}')
     is_funding = FUNDING_CLOSING
     array_connected_node = []
 
@@ -446,8 +446,8 @@ def close_force_all(client):
         print('[REQ]close: ' + NODE_LABEL[closer_idx] +
               '=>' + NODE_LABEL[closee_idx])
         client.publish(TOPIC_PREFIX + '/request/' + closer,
-                       '{"method":"closechannel_force",'
-                       '"params":[ "' + closee + '" ]}')
+                       '{"method":"closechannel",'
+                       '"params":["' + closee + '","force"]}')
     is_funding = FUNDING_CLOSING
     array_connected_node = []
 

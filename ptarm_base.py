@@ -179,21 +179,24 @@ class PtarmBase(LnNode):
 
     # result[1] = "OK" or "NG"
     def close_mutual(self, node_id):
-        params = '["' + node_id + '","0.0.0.0",0]'
-        return self._close(node_id, params)
+        return self._close(node_id, False)
 
     # result[1] = "OK" or "NG"
     def close_force(self, node_id):
-        params = '["' + node_id + '","0.0.0.0",0,"force"]'
-        return self._close(node_id, params)
+        return self._close(node_id, True)
 
     # result[1] = "OK" or "NG"
-    def _close(self, node_id, params):
-        res = self.socket_send('{"method":"close","params":' + params + '}')
-        if 'error' not in res:
-            res = '{"result": ["closechannel","OK","' + node_id + '"]}'
+    def _close(self, node_id, force):
+        if force:
+            params = '["' + node_id + '","0.0.0.0",0,"force"]'
         else:
-            res = '{"result": ["closechannel","NG","' + node_id + '"]}'
+            params = '["' + node_id + '","0.0.0.0",0]'
+        res = self.socket_send('{"method":"close","params":' + params + '}')
+        str_force = 'force' if force else 'mutual'
+        if 'error' not in res:
+            res = '{"result": ["closechannel","OK","' + node_id + '","' + str_force + '"]}'
+        else:
+            res = '{"result": ["closechannel","NG","' + node_id + '","' + str_force + '"]}'
         return res
 
     def socket_send(self, req):

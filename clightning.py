@@ -177,14 +177,15 @@ class CLightning(LnNode):
 
     # result[1] = "OK" or "NG"
     def _close(self, node_id, force):
+        str_force = 'force' if force else 'mutual'
         try:
             res = self.lnrpc.close(node_id, force=force)
             print('close=', res)
-            res = '{"result": ["closechannel","OK","' + node_id + '"]}'
+            res = '{"result": ["closechannel","OK","' + node_id + '","' + str_force + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail closechannel')
-            res = '{"result": ["closechannel","NG","' + node_id + '"]}'
+            res = '{"result": ["closechannel","NG","' + node_id + '","' + str_force + '"]}'
         return res
 
 

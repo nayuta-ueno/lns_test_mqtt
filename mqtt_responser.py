@@ -97,11 +97,10 @@ def exec_request(client, json_msg):
         if ln_node.get_status(params[0])[0] == LnNode.Status.NONE:
             res = ln_node.open_channel(params[0], params[1])
     elif method == 'closechannel':
-        if ln_node.get_status(params[0])[0] == LnNode.Status.NORMAL:
-            res = ln_node.close_mutual(params[0])
-    elif method == 'closechannel_force':
-        if ln_node.get_status(params[0])[0] == LnNode.Status.NORMAL:
+        if len(params) == 2 and params[1] == 'force':
             res = ln_node.close_force(params[0])
+        else:
+            res = ln_node.close_mutual(params[0])
     else:
         print('unknown method=', method)
     if len(res) > 0:

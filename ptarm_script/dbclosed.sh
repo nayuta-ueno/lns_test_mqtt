@@ -9,4 +9,5 @@ cat << EOS | jq -e '.'
 { "method":"dbclosed", "short_channel_id":"$1", "node_id":"$2", "date":"$DATE", "channel_id":"$3" }
 EOS
 
-python3 mqtt_pub.py "dbclosed:$3" $2
+../showdb --showclosed $3
+python3 script/mqtt_pub.py "dbclosed:$3" $2

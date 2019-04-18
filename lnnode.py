@@ -60,8 +60,8 @@ class LnNode(metaclass=ABCMeta):
     # result[1] = "OK" or "NG"
     @abstractmethod
     def close_mutual(self, node_id):
-        return '{"result": ["closechannel","NG","@@@"]}'
+        return '{"result": ["closechannel","NG","@@@","mutual"]}'
 
     # result[1] = "OK" or "NG"
     def close_force(self, node_id):
-        return '{"result": ["closechannel_force","NG","@@@"]}'
+        return '{"result": ["closechannel","NG","@@@","force"]}'
