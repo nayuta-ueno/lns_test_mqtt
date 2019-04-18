@@ -55,6 +55,8 @@ def on_message(client, _, msg):
         elif msg.topic == TOPIC_PREFIX + '/stop/' + node_id:
             print('STOP!')
             _killme()
+        elif msg.topic.startswith(TOPIC_PREFIX) and msg.topic.endswith(node_id):
+            print('message: topic=' + msg.topic + ', payload=' + payload)
     except:
         print('traceback.format_exc():\n%s' % traceback.format_exc())
 

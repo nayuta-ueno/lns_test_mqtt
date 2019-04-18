@@ -1,0 +1,53 @@
+import paho.mqtt.client
+import sys
+import configparser
+
+config = configparser.ConfigParser()
+
+
+# MQTT
+MQTT_HOST = ''
+MQTT_PORT = 0
+TOPIC_PREFIX = ''
+
+topic = ''
+message = ''
+
+
+def on_connect(client, userdata, flags, respons_code):
+    del userdata, flags, respons_code
+
+    client.publish(topic, message)
+    client.disconnect()
+
+
+def main():
+    g_mqtt = paho.mqtt.client.Client(protocol=paho.mqtt.client.MQTTv311)
+    g_mqtt.\
+        connect(MQTT_HOST, port=MQTT_PORT, keepalive=60)
+    g_mqtt.on_connect = on_connect
+    g_mqtt.loop_forever()
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print('usage: ' + sys.argv[0] + ' <message> <node_id>')
+        sys.exit()
+
+    config.read('./config.ini')
+    testname = '<TESTNAME>'
+    print('testname= ' + testname)
+
+    MQTT_HOST = config.get('MQTT', 'BROKER_URL')
+    MQTT_PORT = config.getint('MQTT', 'BROKER_PORT')
+    TOPIC_PREFIX = config.get(testname, 'TOPIC_PREFIX')
+    NODE_OPEN_AMOUNT = config.getint(testname, 'NODE_OPEN_AMOUNT')
+    PAY_COUNT_MAX = config.getint(testname, 'PAY_COUNT_MAX')
+    PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
+    PAY_START_BLOCK = config.getint(testname, 'PAY_START_BLOCK')
+    PAY_FAIL_BLOCK = config.getint(testname, 'PAY_FAIL_BLOCK')
+
+
+    message = sys.argv[1]
+    topic = testname + '/' + 'message' + sys.argv[2]
+    main()
