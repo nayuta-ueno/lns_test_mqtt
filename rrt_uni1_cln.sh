@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eu
 
+#
+# c-lightningがunilateral closeする
+#
+
 ####################################################
 read_ini() {
 	# ini setting
@@ -44,13 +48,17 @@ echo ptarm: hop
 
 SUFFIX=
 START_GENERATOR=0
-TESTNAME=UNI1
+TESTNAME=UNI1_CLN
 ADDR=127.0.0.1
 
 PORTBASE=`read_ini`
 NODE_PORT=()		# all node port
 NODE_TYPE=()		# node type
 CLN_NUM=0
+
+# NODE_PORTとNODE_TYPEの順番は同じになるようにしてほしい
+# 最終的には、NODE_TYPEの順番でrequesterの引数を設定する
+# CLN_NUMはc-lightningの個数で、fundingチェックに使っている
 
 port=$((PORTBASE))
 NODE_PORT+=(${port})
@@ -89,6 +97,9 @@ for i in ${NODE_TYPE[@]}; do
 		rm -rf rt${port}
 		./new_nodedir.sh rt${port}
 		cd rt${port}
+		cp ../../../lns_test_mqtt/config.ini ./script/
+		cp ../../../lns_test_mqtt/ptarm_script/* ./script/
+		cat ./script/mqtt_pub.template | sed -e "s/<TESTNAME>/${TESTNAME}/g" > ./script/mqtt_pub.py
 		nohup ../ptarmd --network=regtest --port ${port} > ${LOGDIR}/ptarm${port}.log&
 		PID+=($!)
 		echo NODE ptarm port=${port}:$!

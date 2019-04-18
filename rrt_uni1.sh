@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eu
 
+#
+# ptarmdがunilateral closeする
+#
+
 ####################################################
 read_ini() {
 	# ini setting
@@ -51,6 +55,10 @@ PORTBASE=`read_ini`
 NODE_PORT=()		# all node port
 NODE_TYPE=()		# node type
 CLN_NUM=0
+
+# NODE_PORTとNODE_TYPEの順番は同じになるようにしてほしい
+# 最終的には、NODE_TYPEの順番でrequesterの引数を設定する
+# CLN_NUMはc-lightningの個数で、fundingチェックに使っている
 
 port=$((PORTBASE))
 NODE_PORT+=(${port})
