@@ -9,5 +9,8 @@ cat << EOS | jq -e '.'
 { "method":"dbclosed", "short_channel_id":"$1", "node_id":"$2", "date":"$DATE", "channel_id":"$3" }
 EOS
 
+echo [showclosed]
 ../showdb --showclosed $3
+echo [paytowalletvin]
+../showdb --paytowalletvin
 python3 script/mqtt_pub.py "dbclosed:$3" $2

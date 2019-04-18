@@ -81,6 +81,9 @@ NODE_OPEN = [
 ]
 NODE_OPEN_AMOUNT = 0
 
+# 送金要求額
+INVOICE_AMOUNT_MSAT = 1000
+
 # 送金回数。この回数だけ送金後、mutual closeする。
 PAY_COUNT_MAX = 0
 
@@ -325,7 +328,7 @@ def requester(client):
                 log_print('[REQ]invoice(' + NODE_LABEL[payer_idx] + ')')
                 client.publish(TOPIC_PREFIX + '/request/' + array_node_id[payee_idx],
                                '{"method":"invoice",'
-                               '"params":[ 1000,"' + NODE_LABEL[payer_idx]+'" ]}')
+                               '"params":[ ' + str(INVOICE_AMOUNT_MSAT) + ',"' + NODE_LABEL[payer_idx]+'" ]}')
             else:
                 pay_max_count += 1
         if pay_max_count == int(NODE_NUM / 2):
@@ -678,6 +681,7 @@ if __name__ == '__main__':
     PAY_INVOICE_ELAPSE = config.getint(testname, 'PAY_INVOICE_ELAPSE')
     PAY_START_BLOCK = config.getint(testname, 'PAY_START_BLOCK')
     PAY_FAIL_BLOCK = config.getint(testname, 'PAY_FAIL_BLOCK')
+    INVOICE_AMOUNT_MSAT = config.getint(testname, 'INVOICE_AMOUNT_MSAT', fallback=1000000)
 
     # 引数とnode_idの対応
     cnt = 0
