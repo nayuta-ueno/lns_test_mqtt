@@ -18,7 +18,7 @@ class Ptarm(PtarmBase):
         fconf = self.linux_cmd_exec('./pay_fundin.py ' + str(amount) + ' 0 ""')
         if fconf is None:
             print('fail: pay_fundin.py')
-            return '{"result": ["openchannel","NG"]}'
+            return '{"result": ["openchannel","NG","' + node_id + '","pay_fundin.py"]}'
         else:
             print('fconf=' + fconf)
 
