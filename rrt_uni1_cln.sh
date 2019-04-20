@@ -2,7 +2,8 @@
 set -eu
 
 #
-# c-lightningがunilateral closeする
+echo payer=cln, payee=ptarm
+echo c-lightningがunilateral closeする
 #
 
 ####################################################

@@ -2,7 +2,8 @@
 set -eu
 
 #
-# ptarmdがunilateral closeする
+echo payer=ptarmd, payee=cln
+echo ptarmdがunilateral closeする
 #
 
 ####################################################
