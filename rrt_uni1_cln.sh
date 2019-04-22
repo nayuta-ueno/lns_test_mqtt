@@ -106,10 +106,10 @@ for i in ${NODE_TYPE[@]}; do
 		cd ../../..
 	fi
 	cnt=$((cnt+1))
-	create_kill_script
 done
 
 cd lns_test_mqtt
+create_kill_script
 
 sleep 10
 
@@ -143,8 +143,6 @@ if [ "${START_GENERATOR}" -eq 1 ]; then
 	nohup ./regtestkeepfee.sh > /dev/null&
 	PID+=($!)
 fi
-
-create_kill_script
 
 # fund check
 echo !!! fund check !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

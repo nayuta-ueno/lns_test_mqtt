@@ -97,10 +97,10 @@ for i in ${NODE_TYPE[@]}; do
 		cd ../../..
 	fi
 	cnt=$((cnt+1))
-	create_kill_script
 done
 
 cd lns_test_mqtt
+create_kill_script
 
 sleep 10
 
@@ -125,8 +125,6 @@ for i in ${NODE_TYPE[@]}; do
 	cnt=$((cnt+1))
 	sleep 1
 done
-
-create_kill_script
 
 # generator
 if [ "${START_GENERATOR}" -eq 1 ]; then
