@@ -7,6 +7,7 @@ import traceback
 import time
 import subprocess
 import signal
+from datetime import datetime
 
 from lnnode import LnNode
 
@@ -66,6 +67,7 @@ class PtarmBase(LnNode):
     }
     '''
     def get_status(self, peer):
+        print('get_status: begin: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
         local_msat = 0
         response = ''
         try:
@@ -74,6 +76,7 @@ class PtarmBase(LnNode):
             jrpc = json.loads(response)
             if ('result' not in jrpc) or ('peers' not in jrpc['result']) or (len(jrpc['result']['peers']) == 0):
                 print('  status: none')
+                print('get_status: end: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
                 return LnNode.Status.NONE, 0
             peer_status = ''
             current_ch = None
@@ -100,6 +103,7 @@ class PtarmBase(LnNode):
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('response=' + response)
             status = LnNode.Status.UNKNOWN
+        print('get_status: end: ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
         return status, local_msat
 
     def get_nodeid(self):

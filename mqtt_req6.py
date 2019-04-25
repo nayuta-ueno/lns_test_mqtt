@@ -78,6 +78,9 @@ PAY_FAIL_BLOCK = 10
 # 使うノード数
 NODE_NUM = 11
 
+# 'status'がこの秒数以上来なかったらテストを停止する
+NODE_NOT_EXIST_SEC = NODE_NUM * 20
+
 # array_node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
 NODE0 = 0
@@ -210,7 +213,7 @@ def poll_time(client):
             stop_order = True
             break
         for node in dict_recv_node:
-            if time.time() - dict_recv_node[node] > 120:
+            if time.time() - dict_recv_node[node] > NODE_NOT_EXIST_SEC:
                 reason = 'node not exist:' + node
                 stop_order = True
                 break
@@ -554,7 +557,7 @@ def message_status(client, json_msg, msg, recv_id):
     recv_name = nodeid2label(recv_id)
     if recv_id not in dict_paycount:
         dict_paycount[recv_id] = PayCount()
-    print(recv_name + 
+    print(recv_name +
           ':  invoice_count=' + str(dict_paycount[recv_id].invoice_count) +
           ',  pay_count=' + str(dict_paycount[recv_id].pay_count) +
           ', last_fail_pay_count=' + str(dict_paycount[recv_id].last_fail_pay_count) +

@@ -9,6 +9,7 @@ import threading
 import time
 import os
 import signal
+from datetime import datetime
 
 from lnnode import LnNode
 from ptarm import Ptarm
@@ -53,7 +54,7 @@ def on_message(client, _, msg):
             #print('NOTIFY[' + msg.topic + ']' + payload)
             exec_notify(client, json.loads(payload))
         elif msg.topic == TOPIC_PREFIX + '/stop/' + node_id:
-            print('STOP!')
+            print('STOP! ' + datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
             _killme()
         elif msg.topic.startswith(TOPIC_PREFIX) and msg.topic.endswith(node_id):
             print('message: topic=' + msg.topic + ', payload=' + payload)
@@ -69,7 +70,7 @@ def poll_status(client):
             stat = [str(st), peer, local_msat]
             status.append(stat)
             # print('status=', status)
-        res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port, 'name': ln_node.get_name()}
+        res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port, 'name': ln_node.get_name(), 'time': datetime.now().strftime("%Y/%m/%d %H:%M:%S")}
         client.publish(TOPIC_PREFIX + '/status/' + node_id, json.dumps(res_dict))
 
         # https://stackoverflow.com/questions/12919980/nohup-is-not-writing-log-to-output-file
