@@ -1,18 +1,12 @@
 #!/bin/bash
 set -eu
 
-SUFFIX=
-START_GENERATOR=0
-TESTNAME=REQ1
-
-KILLSH=kill_${TESTNAME}_${SUFFIX}.sh
-LOGDIR=`pwd`/logs_${TESTNAME}_${SUFFIX}
-ADDR=127.0.0.1
-
+####################################################
 read_ini() {
 	# ini setting
 	INI_FILE=config.ini
 	INI_SECTION=${TESTNAME}
+	PORTBASE=0
 
 	# ini parser
 	eval `sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
@@ -25,54 +19,105 @@ read_ini() {
 	echo ${PORTBASE}
 }
 
-PORTBASE=`read_ini`
-NODE1=$((PORTBASE))
-NODE2=$((PORTBASE+10))
+create_kill_script() {
+	# create killall script
+	touch ${KILLSH}
+	echo "#!/bin/bash" > ${KILLSH}
+	for i in ${PID[@]}; do
+		echo "kill -9 ${i}" >> ${KILLSH}
+	done
+}
 
-CLN=(${NODE1})
-PTARM=(${NODE2})
+get_nodeid() {
+	if [ "$1" == "clightning" ]; then
+		python3 clightning.py /tmp/light$2
+	elif [ "$1" == "ptarm" ]; then
+		python3 ptarm.py ${ADDR} $2
+	else
+		echo Invalid argument: $1
+		exit 1
+	fi
+}
+####################################################
+
+SUFFIX=
+START_GENERATOR=0
+TESTNAME=REQ1
+ADDR=127.0.0.1
+
+PORTBASE=`read_ini`
+NODE_PORT=()		# all node port
+NODE_TYPE=()		# node type
+CLN_NUM=0
+
+NODE_PORT+=($((PORTBASE)))
+NODE_TYPE+=(ptarm)
+
+NODE_PORT+=($((PORTBASE+10)))
+NODE_TYPE+=(clightning)
+CLN_NUM=1
+
+####################
+
+KILLSH=kill_${TESTNAME}_${SUFFIX}.sh
+LOGDIR=`pwd`/logs_${TESTNAME}_${SUFFIX}
 PIDS=()
 
 rm -rf ${LOGDIR}
 mkdir -p ${LOGDIR}
 cp rrt_cln_daemon.sh ../lightning/
 
-# c-lightning
-cd ../lightning
-for i in ${CLN[@]}; do
-	rm -rf rt${i}
-	nohup ./lightningd/lightningd --network=regtest --lightning-dir=rt${i} --addr=${ADDR}:${i} --log-level=debug --rpc-file=/tmp/light${i} > ${LOGDIR}/cln${i}.log&
-	PID+=($!)
+cd ..
+
+echo !!! node start !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+cnt=0
+for i in ${NODE_TYPE[@]}; do
+	port=${NODE_PORT[${cnt}]}
+	if [ $i == clightning ]; then
+		cd ./lightning
+		rm -rf rt${port}
+		nohup ./lightningd/lightningd --network=regtest --lightning-dir=rt${port} --addr=${ADDR}:${port} --log-level=debug --rpc-file=/tmp/light${port} > ${LOGDIR}/cln${port}.log&
+		PID+=($!)
+		echo NODE clightning port=${port}:$!
+		cd ..
+	elif [ $i == ptarm ]; then
+		cd ./ptarmigan/install
+		rm -rf rt${port}
+		./new_nodedir.sh rt${port}
+		cd rt${port}
+		nohup ../ptarmd --network=regtest --port ${port} > ${LOGDIR}/ptarm${port}.log&
+		PID+=($!)
+		echo NODE ptarm port=${port}:$!
+		cd ../../..
+	fi
+	cnt=$((cnt+1))
 done
 
-# ptarmigan
-cd ../ptarmigan/install
-for i in ${PTARM[@]}; do
-	rm -rf rt${i}
-	./new_nodedir.sh rt${i}
-	cd rt${i}
-	nohup ../ptarmd --network=regtest --port ${i} > ${LOGDIR}/ptarm${i}.log&
-	PID+=($!)
-	cd ..
-done
-cd ../..
-
-sleep 5
-
-# responser
 cd lns_test_mqtt
-for i in ${CLN[@]}; do
-	nohup python3 mqtt_responser.py ${TESTNAME} clightning ${ADDR} ${i} /tmp/light${i} > ${LOGDIR}/mqtt_cln${i}.log&
-	PID+=($!)
-done
-for i in ${PTARM[@]}; do
-	nohup python3 mqtt_responser.py ${TESTNAME} ptarm ${ADDR} ${i} > ${LOGDIR}/mqtt_ptarm${i}.log&
-	PID+=($!)
-done
+create_kill_script
 
-# c-lightning fund
-for i in ${CLN[@]}; do
-	./rrt_cln_pay.sh ${i}
+sleep 10
+
+echo !!! client MQTT start !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+cnt=0
+for i in ${NODE_TYPE[@]}; do
+	port=${NODE_PORT[${cnt}]}
+	if [ $i == clightning ]; then
+		# responser
+		nohup python3 mqtt_responser.py ${TESTNAME} clightning ${ADDR} ${port} /tmp/light${port} > ${LOGDIR}/mqtt_cln${port}.log&
+		PID+=($!)
+		echo MQTT clightning port=${port}:$!
+
+		#fund
+		./rrt_cln_pay.sh ${port}
+	elif [ $i == ptarm ]; then
+		# responser
+		nohup python3 mqtt_responser.py ${TESTNAME} ptarm ${ADDR} ${port} > ${LOGDIR}/mqtt_ptarm${port}.log&
+		PID+=($!)
+		echo MQTT ptarm port=${port}:$!
+	fi
+	cnt=$((cnt+1))
+	sleep 1
 done
 
 # generator
@@ -81,27 +126,29 @@ if [ "${START_GENERATOR}" -eq 1 ]; then
 	PID+=($!)
 fi
 
-# create killall script
-touch ${KILLSH}
-echo "#!/bin/bash" > ${KILLSH}
-for i in ${PID[@]}; do
-	echo "kill -9 ${i}" >> ${KILLSH}
-done
+create_kill_script
 
 # fund check
+echo !!! fund check !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 while :
 do
 	cnt=0
-	for i in ${CLN[@]}; do
-		fund=`./rrt_cln_fund.sh ${i}`
-		fund=`echo ${fund} | jq -e '. | length'`
-		if [ ${fund} -ne 0 ]; then
-			cnt=$((cnt+1))
+	funded=0
+	for i in ${NODE_TYPE[@]}; do
+		port=${NODE_PORT[${cnt}]}
+		if [ $i == clightning ]; then
+			fund=`./rrt_cln_fund.sh ${port}`
+			fund=`echo ${fund} | jq -e '. | length'`
+			if [ ${fund} -ne 0 ]; then
+				funded=$((funded+1))
+			fi
 		fi
+		cnt=$((cnt+1))
 	done
-	if [ $cnt -eq ${#CLN[@]} ]; then
+	if [ ${funded} -eq ${CLN_NUM} ]; then
 		break
 	fi
+	echo funded=${funded}, clightning=${CLN_NUM}
 	sleep 10
 done
 
@@ -109,13 +156,18 @@ echo !!!!!!!!!!!!!!!!!!
 echo !!! TEST START !!!
 echo !!!!!!!!!!!!!!!!!!
 
-NODEID1=`python3 clightning.py /tmp/light${NODE1}`
-NODEID2=`python3 ptarm.py ${ADDR} ${NODE2}`
+NODEID=()
+cnt=0
+for i in ${NODE_TYPE[@]}; do
+	port=${NODE_PORT[${cnt}]}
+	NODEID+=(`get_nodeid $i ${port}`)
+    echo PORT $i:${port}=${NODEID[${cnt}]}
+	cnt=$((cnt+1))
+done
 
-echo TESTNAME= ${TESTNAME}
-echo NODE1= ${NODEID1}
-echo NODE2= ${NODEID2}
-
-nohup python3 mqtt_req1.py ${TESTNAME} ${NODEID1} ${NODEID2} > ${LOGDIR}/mqtt_req.log&
+echo python3 mqtt_req1.py ${TESTNAME} ${NODEID[@]}
+nohup python3 mqtt_req1.py ${TESTNAME} ${NODEID[@]} > ${LOGDIR}/mqtt_req.log&
 echo "kill -9 $!" >> ${KILLSH}
 echo "rm ${KILLSH}" >> ${KILLSH}
+
+echo started.

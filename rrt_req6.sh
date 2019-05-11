@@ -40,8 +40,6 @@ get_nodeid() {
 }
 ####################################################
 
-echo ptarm: hop
-
 SUFFIX=
 START_GENERATOR=0
 TESTNAME=REQ6

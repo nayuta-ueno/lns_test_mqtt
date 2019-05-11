@@ -49,7 +49,7 @@ do
 			echo FEERATE=${FEERATE}
 			sleep ${GENERATE_SEC}
 			bitcoin-cli sendtoaddress `bitcoin-cli getnewaddress` 0.01
-			bitcoin-cli generate 1
+			bitcoin-cli generatetoaddress 1 `bitcoin-cli getnewaddress`
 			cnt=0
 			continue
 		fi
@@ -57,7 +57,7 @@ do
 	cnt=$((cnt+1))
 	if [ ${cnt} -gt 10 ]; then
 		echo -----------------
-		bitcoin-cli generate 1
+		bitcoin-cli generatetoaddress 1 `bitcoin-cli getnewaddress`
 		cnt=0
 	fi
 

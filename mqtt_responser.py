@@ -13,7 +13,6 @@ from datetime import datetime
 
 from lnnode import LnNode
 from ptarm import Ptarm
-from ptarmj import PtarmJ
 import clightning
 import configparser
 
@@ -70,6 +69,7 @@ def poll_status(client):
             stat = [str(st), peer, local_msat]
             status.append(stat)
             # print('status=', status)
+        print('send status')
         res_dict = {'status': status, 'ipaddr': ln_node.ipaddr, 'port': ln_node.port, 'name': ln_node.get_name(), 'time': datetime.now().strftime("%Y/%m/%d %H:%M:%S")}
         client.publish(TOPIC_PREFIX + '/status/' + node_id, json.dumps(res_dict))
 
@@ -77,6 +77,7 @@ def poll_status(client):
         sys.stdout.flush()
 
         time.sleep(10)
+    print('exit poll_status')
 
 
 def exec_request(client, json_msg):
@@ -146,8 +147,6 @@ if __name__ == '__main__':
 
     if sys.argv[2] == 'ptarm':
         ln_node = Ptarm()
-    elif sys.argv[2] == 'ptarmj':
-        ln_node = PtarmJ()
     elif sys.argv[2] == 'clightning':
         ln_node = clightning.CLightning()
         if len(sys.argv) >= 6:
