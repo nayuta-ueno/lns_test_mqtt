@@ -17,9 +17,11 @@ payment() {
 		AMOUNT=`echo ${LIST} | jq .[${num}].amount`
 		AMOUNT=$(printf "%.8f" ${AMOUNT})
 		echo "  AMOUNT=${AMOUNT}"
-		# 20mBTC以上のamount
-		SUB=`echo "${AMOUNT} * 200 / 10" | bc`
+		# 10mBTC以上のamount
+		SUB=`echo "${AMOUNT}*100/1" | bc`
+		echo "     SUB=${SUB}"
 		if [ ${SUB} -gt 0 ]; then
+			echo "     break"
 			break
 		fi
 		num=$((num+1))
@@ -48,7 +50,7 @@ do
 		if [ ${SUB:0:1} == '-' ]; then
 			echo FEERATE=${FEERATE}
 			sleep ${GENERATE_SEC}
-			bitcoin-cli sendtoaddress `bitcoin-cli getnewaddress` 0.01
+			bitcoin-cli sendtoaddress `bitcoin-cli getnewaddress` 0.0007
 			bitcoin-cli generatetoaddress 1 `bitcoin-cli getnewaddress`
 			cnt=0
 			continue

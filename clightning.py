@@ -12,7 +12,7 @@ import random
 import time
 
 from lnnode import LnNode
-from lightning import LightningRpc
+from lightning import LightningRpc, RpcError
 
 
 class CLightning(LnNode):
@@ -95,7 +95,6 @@ class CLightning(LnNode):
         return status, channel_sat
 
     def get_nodeid(self):
-        node = ''
         try:
             info = self.lnrpc.getinfo()
             return info['id']
@@ -109,6 +108,10 @@ class CLightning(LnNode):
             res = self.lnrpc.connect(node_id, ipaddr, port)
             print('connect=', res)
             res = '{"result": ["connect","OK","' + node_id + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail connect')
+            res = '{"result": ["connect","NG","' + node_id + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail connect')
@@ -122,6 +125,10 @@ class CLightning(LnNode):
             res = self.lnrpc.disconnect(node_id, force=True)
             print('disconnect=', res)
             res = '{"result": ["disconnect","OK","' + node_id + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail disconnect')
+            res = '{"result": ["disconnect","NG","' + node_id + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail disconnect')
@@ -134,6 +141,10 @@ class CLightning(LnNode):
             res = self.lnrpc.fundchannel(node_id, amount)
             print('open_channel=', res)
             res = '{"result": ["openchannel","OK","' + node_id + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail openchannel')
+            res = '{"result": ["openchannel","NG","' + node_id + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail open_channel')
@@ -146,6 +157,10 @@ class CLightning(LnNode):
             res = self.lnrpc.invoice(amount_msat, "lbl{}".format(random.random()), "testpayment")
             print('invoice=', res)
             res = '{"result": ["invoice","' + res['bolt11'] + '","' + label + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail invoice')
+            res = '{"result": ["invoice","NG","' + label + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail invoice')
@@ -158,6 +173,10 @@ class CLightning(LnNode):
             res = self.lnrpc.pay(invoice, riskfactor=100)
             print('pay=', res)
             res = '{"result": ["pay","OK","' + invoice + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail pay: ' + invoice)
+            res = '{"result": ["pay","NG","' + invoice + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail pay: ' + invoice)
@@ -182,6 +201,10 @@ class CLightning(LnNode):
             res = self.lnrpc.close(node_id, force=force)
             print('close=', res)
             res = '{"result": ["closechannel","OK","' + node_id + '","' + str_force + '"]}'
+        except RpcError as e:
+            print('traceback.format_exc():\n%s' % traceback.format_exc())
+            print('fail closechannel')
+            res = '{"result": ["closechannel","NG","' + invoice + '","' + e.error.message + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail closechannel')
