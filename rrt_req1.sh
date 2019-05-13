@@ -50,12 +50,12 @@ NODE_PORT=()		# all node port
 NODE_TYPE=()		# node type
 CLN_NUM=0
 
-NODE_PORT+=($((PORTBASE)))
-NODE_TYPE+=(ptarm)
-
 NODE_PORT+=($((PORTBASE+10)))
 NODE_TYPE+=(clightning)
 CLN_NUM=1
+
+NODE_PORT+=($((PORTBASE)))
+NODE_TYPE+=(ptarm)
 
 ####################
 
