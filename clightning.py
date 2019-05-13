@@ -111,7 +111,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail connect')
-            res = '{"result": ["connect","NG","' + node_id + '","' + e.error.message + '"]}'
+            res = '{"result": ["connect","NG","' + node_id + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail connect')
@@ -128,7 +128,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail disconnect')
-            res = '{"result": ["disconnect","NG","' + node_id + '","' + e.error.message + '"]}'
+            res = '{"result": ["disconnect","NG","' + node_id + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail disconnect')
@@ -144,7 +144,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail openchannel')
-            res = '{"result": ["openchannel","NG","' + node_id + '","' + e.error.message + '"]}'
+            res = '{"result": ["openchannel","NG","' + node_id + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail open_channel')
@@ -160,7 +160,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail invoice')
-            res = '{"result": ["invoice","NG","' + label + '","' + e.error.message + '"]}'
+            res = '{"result": ["invoice","NG","' + label + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail invoice')
@@ -176,7 +176,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail pay: ' + invoice)
-            res = '{"result": ["pay","NG","' + invoice + '","' + e.error.message + '"]}'
+            res = '{"result": ["pay","NG","' + invoice + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail pay: ' + invoice)
@@ -204,7 +204,7 @@ class CLightning(LnNode):
         except RpcError as e:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail closechannel')
-            res = '{"result": ["closechannel","NG","' + invoice + '","' + e.error.message + '"]}'
+            res = '{"result": ["closechannel","NG","' + node_id + '","' + e.error['message'] + '"]}'
         except:
             print('traceback.format_exc():\n%s' % traceback.format_exc())
             print('fail closechannel')
