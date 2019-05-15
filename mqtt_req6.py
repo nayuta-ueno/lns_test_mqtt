@@ -12,10 +12,10 @@ node8--+     +-node9
         [node2 => hop]connect
         ...
         [node8 => hop]connect
-        [hop => node2]connect
-        [hop => node4]connect
+        [hop => node1]connect
+        [hop => node3]connect
         ...
-        [hop => node10]connect
+        [hop => node9]connect
         [node0 => hop]open_channel
         [node2 => hop]open_channel
         [hop => node2]open_channel
@@ -72,14 +72,17 @@ FUNDING_WAIT = 1
 FUNDING_FUNDED = 2
 FUNDING_CLOSING = 3
 
-PAY_START_BLOCK = 8
-PAY_FAIL_BLOCK = 10
+PAY_START_BLOCK = 0
+PAY_FAIL_BLOCK = 0
 
 # 使うノード数
 NODE_NUM = 11
 
 # 'status'がこの秒数以上来なかったらテストを停止する
 NODE_NOT_EXIST_SEC = NODE_NUM * 20
+
+# close前の待ち時間
+NODE_CLOSE_SEC = 30
 
 # array_node_id[]のインデックス
 #   偶数番n(payer)とn+1(payee)がセットになる
@@ -109,13 +112,18 @@ NODE_CONNECT = [
     [HOP, NODE1], [HOP, NODE3], [HOP, NODE5], [HOP, NODE7], [HOP, NODE9],
 ]
 NODE_OPEN = NODE_CONNECT
+
+# [config]open時のamount
 NODE_OPEN_AMOUNT = 0
 
-# 送金回数。この回数だけ送金後、mutual closeする。
+# [config]送金回数。この回数だけ送金後、mutual closeする。
 PAY_COUNT_MAX = 0
 
-# 今のところ送金完了が分からないので、一定間隔で送金している
+# [config]今のところ送金完了が分からないので、一定間隔で送金している
 PAY_INVOICE_ELAPSE = 0
+
+# invoiceでの要求額
+PAY_AMOUNT_MSAT = 1000
 
 # 送信失敗が連続してテストを終了するカウント
 FAIL_CONT_MAX = 3
@@ -355,12 +363,13 @@ def requester(client):
                 log_print('[REQ]invoice(' + NODE_LABEL[payer_idx] + ')')
                 client.publish(TOPIC_PREFIX + '/request/' + array_node_id[payee_idx],
                                '{"method":"invoice",'
-                               '"params":[ 1000,"' + NODE_LABEL[payer_idx]+'" ]}')
+                               '"params":[ ' + str(PAY_AMOUNT_MSAT) + ',"' + NODE_LABEL[payer_idx]+'" ]}')
             else:
                 pay_max_count += 1
         if pay_max_count == int(NODE_NUM / 2):
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
+            time.sleep(NODE_CLOSE_SEC)
             close_all(client)
             for pay_obj in dict_paycount.values():
                 pay_obj.pay_count = 0

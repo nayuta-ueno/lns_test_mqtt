@@ -93,6 +93,9 @@ PAY_COUNT_MAX = 0
 # 今のところ送金完了が分からないので、一定間隔で送金している
 PAY_INVOICE_ELAPSE = 0
 
+# close前の待ち時間
+NODE_CLOSE_SEC = 30
+
 # 送信失敗が連続してテストを終了するカウント
 FAIL_CONT_MAX = 3
 
@@ -332,16 +335,18 @@ def requester(client):
                 log_print('[REQ]invoice(node4)')
                 client.publish(TOPIC_PREFIX + '/request/' + node_id[NODE4],
                                '{"method":"invoice","params":[ 2000,"node3" ]}')
-                time.sleep(PAY_INVOICE_ELAPSE)
             else:
                 pay_max_count += 1
         if pay_max_count == len(NODE_PAYER):
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
+            time.sleep(NODE_CLOSE_SEC)
             close_all(client)
             for pay_obj in dict_paycount.values():
                 pay_obj.pay_count = 0
             break
+        else:
+            time.sleep(PAY_INVOICE_ELAPSE)
     print('exit requester')
 
 

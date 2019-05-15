@@ -81,6 +81,9 @@ PAY_COUNT_MAX = 0
 # 今のところ送金完了が分からないので、一定間隔で送金している
 PAY_INVOICE_ELAPSE = 0
 
+# close前の待ち時間
+NODE_CLOSE_SEC = 30
+
 # global variable
 node_id = [''] * NODE_NUM
 dict_recv_node = dict()
@@ -307,6 +310,7 @@ def requester(client):
         else:
             # 一定回数送金要求したらチャネルを閉じる
             log_print('[REQ]close all')
+            time.sleep(NODE_CLOSE_SEC)
             pay_count = 0
             close_all(client)
             break
