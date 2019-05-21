@@ -161,7 +161,7 @@ def poll_time(client):
 
         # check health
         if len(dict_recv_node) < NODE_NUM:
-            reason = 'not all node found: ', str(dict_recv_node)
+            reason = 'not all node found: ' + str(dict_recv_node)
             stop_order = True
             break
         for node in dict_recv_node:
